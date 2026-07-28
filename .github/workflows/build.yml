@@ -55,7 +55,9 @@ jobs:
           sed -i 's/versionName ".*"/versionName "${{ inputs.version }}"/' app/build.gradle
 
       - name: Build ${{ matrix.mode }}-${{ matrix.abi }}
-        run: ./gradlew assemble${{ matrix.variant }}
+        run: |
+          chmod +x gradlew
+          ./gradlew assemble${{ matrix.variant }}
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
