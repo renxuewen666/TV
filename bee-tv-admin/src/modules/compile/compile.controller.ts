@@ -1,7 +1,8 @@
-import { Controller, Get, Post, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param, Query, UseGuards, Req, Res } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CompileService } from './compile.service';
+import { Request, Response } from 'express';
 
 @ApiTags('APP编译')
 @ApiBearerAuth()
@@ -26,4 +27,9 @@ export class CompileController {
 
   @Delete(':id')
   remove(@Param('id') id: string) { return this.compileService.deleteTask(+id); }
+
+  @Get(':id/download/:artifactId')
+  download(@Param('id') id: string, @Param('artifactId') artifactId: string, @Req() req: Request, @Res() res: Response) {
+    return this.compileService.downloadArtifact(+id, +artifactId, req, res);
+  }
 }

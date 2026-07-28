@@ -112,6 +112,7 @@ model CompileTask {
   status        String   @default("pending")
   workflowRunId String   @default("")
   artifactUrl   String   @default("")
+  artifacts     String   @default("")
   log           String   @default("")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

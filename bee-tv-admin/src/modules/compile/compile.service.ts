@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
+import { Request, Response } from 'express';
 
 @Injectable()
 export class CompileService {
@@ -97,9 +98,14 @@ export class CompileService {
       const htmlUrl = data.html_url || '';
 
       if (conclusion === 'success') {
+        const artifacts = await this.fetchArtifacts(owner, repo, task);
         const artifactUrl = `${htmlUrl}/artifacts`;
-        await this.prisma.compileTask.update({ where: { id }, data: { status: 'success', artifactUrl, log: '构建成功' } });
-        return { status: 'success', artifactUrl, htmlUrl };
+        const artifactsJson = JSON.stringify(artifacts);
+        await this.prisma.compileTask.update({
+          where: { id },
+          data: { status: 'success', artifactUrl, artifacts: artifactsJson, log: '构建成功' },
+        });
+        return { status: 'success', artifactUrl, artifacts, htmlUrl };
       }
       if (conclusion === 'failure' || conclusion === 'cancelled') {
         await this.prisma.compileTask.update({ where: { id }, data: { status: 'failed', log: `构建${conclusion}` } });
@@ -115,5 +121,62 @@ export class CompileService {
   async deleteTask(id: number) {
     await this.prisma.compileTask.findUnique({ where: { id } }).then(r => { if (!r) throw new NotFoundException('任务不存在'); });
     return this.prisma.compileTask.delete({ where: { id } });
+  }
+
+  private async fetchArtifacts(owner: string, repo: string, task: any) {
+    const url = `https://api.github.com/repos/${owner}/${repo}/actions/runs/${task.workflowRunId}/artifacts`;
+    try {
+      const res = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${task.githubToken}`,
+          'Accept': 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28',
+        },
+      });
+      const data = await res.json();
+      return (data.artifacts || []).map((a: any) => ({
+        id: a.id,
+        name: a.name.replace(/\.apk$/i, ''),
+        size: a.size_in_bytes,
+        downloadUrl: a.archive_download_url,
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  async downloadArtifact(id: number, artifactId: number, req: Request, res: Response) {
+    const task = await this.prisma.compileTask.findUnique({ where: { id } });
+    if (!task) throw new NotFoundException('任务不存在');
+
+    const [owner, repo] = task.githubRepo.split('/');
+    const url = `https://api.github.com/repos/${owner}/${repo}/actions/artifacts/${artifactId}/zip`;
+
+    const ghRes = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${task.githubToken}`,
+        'Accept': 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+      redirect: 'follow',
+    });
+
+    if (!ghRes.ok) throw new BadRequestException('下载工件失败');
+
+    res.setHeader('Content-Type', ghRes.headers.get('content-type') || 'application/zip');
+    res.setHeader('Content-Disposition', 'attachment; filename="artifact.zip"');
+    res.setHeader('Content-Length', ghRes.headers.get('content-length') || '0');
+
+    const reader = ghRes.body?.getReader();
+    if (!reader) throw new BadRequestException('无法读取工件数据');
+
+    const pump = async () => {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) { res.end(); break; }
+        res.write(value);
+      }
+    };
+    await pump();
   }
 }

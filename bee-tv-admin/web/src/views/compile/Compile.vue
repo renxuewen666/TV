@@ -21,11 +21,22 @@
         </template>
       </el-table-column>
       <el-table-column prop="createdAt" label="创建时间" width="170" />
-      <el-table-column label="操作" width="260" fixed="right">
+      <el-table-column label="操作" width="360" fixed="right">
         <template #default="{ row }">
           <el-button v-if="row.status==='pending'" size="small" type="success" @click="handleTrigger(row.id)">触发构建</el-button>
           <el-button v-if="row.status==='running'" size="small" @click="handleCheck(row.id)">刷新状态</el-button>
-          <el-button v-if="row.status==='success' && row.artifactUrl" size="small" type="primary" @click="openUrl(row.artifactUrl)">下载产物</el-button>
+          <template v-if="row.status==='success' && row.artifacts">
+            <el-popover placement="bottom" :width="260" trigger="click">
+              <template #reference>
+                <el-button size="small" type="primary">下载产物</el-button>
+              </template>
+              <div v-for="a in parseArtifacts(row.artifacts)" :key="a.id" style="padding:4px 0">
+                <el-link type="primary" :href="getDownloadUrl(row.id, a.id)" target="_blank" :underline="false">
+                  {{ a.name }} ({{ formatSize(a.size) }})
+                </el-link>
+              </div>
+            </el-popover>
+          </template>
           <el-button size="small" type="danger" @click="handleDelete(row.id)">删除</el-button>
         </template>
       </el-table-column>
@@ -98,7 +109,23 @@ const handleCheck = async (id: number) => {
   loadData()
 }
 
-const openUrl = (url: string) => window.open(url, '_blank')
+const parseArtifacts = (artifacts: string) => {
+  try { return JSON.parse(artifacts) } catch { return [] }
+}
+
+const getDownloadUrl = (taskId: number, artifactId: number) => {
+  const base = import.meta.env.VITE_API_BASE_URL || ''
+  return `${base}/compile/${taskId}/download/${artifactId}`
+}
+
+const formatSize = (bytes: number) => {
+  if (!bytes) return '0 B'
+  const units = ['B', 'KB', 'MB', 'GB']
+  let i = 0
+  let size = bytes
+  while (size >= 1024 && i < units.length - 1) { size /= 1024; i++ }
+  return size.toFixed(1) + ' ' + units[i]
+}
 
 const handleDelete = async (id: number) => {
   await ElMessageBox.confirm('确认删除？', '提示', { type: 'warning' })
