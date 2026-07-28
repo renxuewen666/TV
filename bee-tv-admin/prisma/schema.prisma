@@ -1,0 +1,238 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model AdminUser {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String
+  nickname  String   @default("")
+  avatar    String   @default("")
+  role      String   @default("admin")
+  status    Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SystemConfig {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  value     String
+  remark    String   @default("")
+  updatedAt DateTime @updatedAt
+}
+
+model MemberLevel {
+  id        Int      @id @default(autoincrement())
+  name      String
+  price     Float    @default(0)
+  duration  Int      @default(30)
+  status    Int      @default(1)
+  sort      Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  members   Member[]
+}
+
+model Member {
+  id         Int         @id @default(autoincrement())
+  userId     String      @unique
+  deviceId   String      @default("")
+  levelId    Int
+  level      MemberLevel @relation(fields: [levelId], references: [id])
+  score      Int         @default(0)
+  expireAt   DateTime?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  signLogs   SignLog[]
+  scoreLogs  ScoreLog[]
+}
+
+model SignLog {
+  id             Int      @id @default(autoincrement())
+  userId         String
+  member         Member   @relation(fields: [userId], references: [userId])
+  signDate       String
+  consecutiveDays Int     @default(1)
+  reward         Int      @default(0)
+  createdAt      DateTime @default(now())
+}
+
+model ScoreLog {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  member    Member   @relation(fields: [userId], references: [userId])
+  type      String   @default("sign_in")
+  score     Int
+  balance   Int      @default(0)
+  remark    String   @default("")
+  createdAt DateTime @default(now())
+}
+
+model ScoreProduct {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String   @default("")
+  image       String   @default("")
+  type        Int      @default(0)
+  points      Int
+  value       String   @default("")
+  stock       Int      @default(-1)
+  status      Int      @default(1)
+  sort        Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ScoreExchange {
+  id          Int      @id @default(autoincrement())
+  userId      String
+  productId   Int
+  productName String   @default("")
+  points      Int
+  result      String   @default("")
+  status      Int      @default(0)
+  createdAt   DateTime @default(now())
+}
+
+model CompileTask {
+  id            Int      @id @default(autoincrement())
+  name          String   @default("")
+  githubRepo    String
+  githubToken   String
+  workflowFile  String   @default("build.yml")
+  branch        String   @default("main")
+  version       String   @default("")
+  channel       String   @default("default")
+  status        String   @default("pending")
+  workflowRunId String   @default("")
+  artifactUrl   String   @default("")
+  log           String   @default("")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model ActivationCode {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique
+  levelId   Int
+  status    Int      @default(0)
+  usedBy    String   @default("")
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+}
+
+model PaymentConfig {
+  id        Int      @id @default(autoincrement())
+  channel   String   @unique
+  config    String
+  status    Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+model PaymentOrder {
+  id          Int      @id @default(autoincrement())
+  orderNo     String   @unique
+  tradeNo     String   @default("")
+  userId      String
+  levelId     Int
+  amount      Float
+  channel     String
+  payType     String   @default("alipay")
+  status      Int      @default(0)
+  createdAt   DateTime @default(now())
+  paidAt      DateTime?
+}
+
+model EpayConfig {
+  id        Int      @id @default(autoincrement())
+  name      String   @default("默认")
+  pid       String
+  key       String
+  apiUrl    String   @default("https://epay.example.com/submit.php")
+  notifyUrl String   @default("")
+  returnUrl String   @default("")
+  status    Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Hotsearch {
+  id        Int      @id @default(autoincrement())
+  title     String
+  url       String   @default("")
+  sort      Int      @default(0)
+  status    Int      @default(1)
+  appIds    String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Notice {
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String
+  type      Int      @default(1)
+  status    Int      @default(1)
+  appIds    String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ApiEndpoint {
+  id        Int      @id @default(autoincrement())
+  name      String
+  type      Int
+  url       String
+  remark    String   @default("")
+  status    Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model RepoSource {
+  id        Int      @id @default(autoincrement())
+  name      String
+  url       String   @unique
+  type      Int
+  priority  Int      @default(0)
+  status    Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model HomeLayout {
+  id        Int      @id @default(autoincrement())
+  name      String
+  type      String   @default("mobile")
+  template  String   @default("classic")
+  config    String
+  status    Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AppVersion {
+  id          Int      @id @default(autoincrement())
+  versionName String
+  versionCode Int
+  channel     String   @default("default")
+  downloadUrl String
+  changelog   String   @default("")
+  forceUpdate Int      @default(0)
+  status      Int      @default(1)
+  createdAt   DateTime @default(now())
+}
+
+model AppChannel {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  packageId String   @default("")
+  status    Int      @default(1)
+  createdAt DateTime @default(now())
+}

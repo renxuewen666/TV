@@ -1,7 +1,7 @@
 <resources xmlns:xliff="http://schemas.android.com/apk/res-auto">
 
     <!-- App -->
-    <string name="app_name">TV</string>
+    <string name="app_name">蜜蜂影视</string>
 
     <!-- Live -->
     <string name="live_pass">Pass</string>
@@ -78,6 +78,7 @@
     <string name="setting_size">Image size</string>
     <string name="setting_doh">DoH</string>
     <string name="setting_proxy">Proxy</string>
+    <string name="setting_server_url">Server</string>
     <string name="setting_cache">Cache</string>
     <string name="setting_backup">Backup</string>
     <string name="setting_restore">Restore</string>

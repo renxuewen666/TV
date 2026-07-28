@@ -17,7 +17,7 @@
         app:focusOutEnd="true"
         app:focusOutFront="true" />
 
-    <com.fongmi.android.tv.ui.custom.CustomViewPager
+    <com.beetv.android.tv.ui.custom.CustomViewPager
         android:id="@+id/pager"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />

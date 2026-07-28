@@ -1,0 +1,74 @@
+name: Build APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      versionCode:
+        description: '版本号 (versionCode)'
+        required: false
+        type: string
+        default: ''
+      versionName:
+        description: '版本名 (versionName)'
+        required: false
+        type: string
+        default: ''
+      channel:
+        description: '渠道'
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - mode: leanback
+            abi: arm64_v8a
+            variant: LeanbackArm64_v8aRelease
+          - mode: leanback
+            abi: armeabi_v7a
+            variant: LeanbackArmeabi_v7aRelease
+          - mode: mobile
+            abi: arm64_v8a
+            variant: MobileArm64_v8aRelease
+          - mode: mobile
+            abi: armeabi_v7a
+            variant: MobileArmeabi_v7aRelease
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Update version
+        if: ${{ inputs.versionCode != '' || inputs.versionName != '' }}
+        run: |
+          if [ -n "${{ inputs.versionCode }}" ]; then
+            sed -i "s/versionCode [0-9]*/versionCode ${{ inputs.versionCode }}/" app/build.gradle
+          fi
+          if [ -n "${{ inputs.versionName }}" ]; then
+            sed -i 's/versionName ".*"/versionName "${{ inputs.versionName }}"/' app/build.gradle
+          fi
+
+      - name: Build ${{ matrix.mode }}-${{ matrix.abi }}
+        run: ./gradlew assemble${{ matrix.variant }}
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.mode }}-${{ matrix.abi }}
+          path: app/build/outputs/apk/**/*.apk

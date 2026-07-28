@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace 'com.fongmi.hook'
+    namespace 'com.beetv.hook'
 
     compileSdk {
         version = release(36) {

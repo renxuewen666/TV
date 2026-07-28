@@ -1,6 +1,6 @@
 # TV
--keep class com.fongmi.quickjs.method.** { *; }
--keep class com.fongmi.android.tv.bean.** { *; }
+-keep class com.beetv.quickjs.method.** { *; }
+-keep class com.beetv.android.tv.bean.** { *; }
 
 # Gson
 -keep class com.google.gson.** { *; }

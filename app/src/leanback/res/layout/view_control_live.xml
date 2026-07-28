@@ -54,7 +54,7 @@
                 android:layout_marginEnd="12dp"
                 android:text="@string/play_decode" />
 
-            <com.fongmi.android.tv.ui.custom.CustomUpDownView
+            <com.beetv.android.tv.ui.custom.CustomUpDownView
                 android:id="@+id/speed"
                 style="@style/Control"
                 android:layout_marginEnd="12dp"
@@ -77,7 +77,7 @@
                 tools:text="來源 1"
                 tools:visibility="visible" />
 
-            <com.fongmi.android.tv.ui.custom.CustomUpDownView
+            <com.beetv.android.tv.ui.custom.CustomUpDownView
                 android:id="@+id/text"
                 style="@style/Control"
                 android:layout_marginEnd="12dp"
@@ -121,7 +121,7 @@
         </androidx.appcompat.widget.LinearLayoutCompat>
     </HorizontalScrollView>
 
-    <com.fongmi.android.tv.ui.custom.CustomSeekView
+    <com.beetv.android.tv.ui.custom.CustomSeekView
         android:id="@+id/seek"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
