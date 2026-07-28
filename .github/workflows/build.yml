@@ -3,13 +3,8 @@ name: Build APK
 on:
   workflow_dispatch:
     inputs:
-      versionCode:
-        description: '版本号 (versionCode)'
-        required: false
-        type: string
-        default: ''
-      versionName:
-        description: '版本名 (versionName)'
+      version:
+        description: '版本号'
         required: false
         type: string
         default: ''
@@ -55,14 +50,9 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
 
       - name: Update version
-        if: ${{ inputs.versionCode != '' || inputs.versionName != '' }}
+        if: ${{ inputs.version != '' }}
         run: |
-          if [ -n "${{ inputs.versionCode }}" ]; then
-            sed -i "s/versionCode [0-9]*/versionCode ${{ inputs.versionCode }}/" app/build.gradle
-          fi
-          if [ -n "${{ inputs.versionName }}" ]; then
-            sed -i 's/versionName ".*"/versionName "${{ inputs.versionName }}"/' app/build.gradle
-          fi
+          sed -i 's/versionName ".*"/versionName "${{ inputs.version }}"/' app/build.gradle
 
       - name: Build ${{ matrix.mode }}-${{ matrix.abi }}
         run: ./gradlew assemble${{ matrix.variant }}
