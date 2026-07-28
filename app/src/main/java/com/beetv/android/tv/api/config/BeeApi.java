@@ -43,8 +43,8 @@ public class BeeApi {
     public JsonObject getJson(String url) throws IOException {
         String body = get(url);
         JsonObject obj = Json.parse(body).getAsJsonObject();
-        int code = Json.safeInt(obj, "code");
-        if (code != 200) throw new IOException("API error: " + Json.safeString(obj, "message"));
+        int code = obj.has("code") ? obj.get("code").getAsInt() : 0;
+        if (code != 200) throw new IOException("API error: " + (obj.has("message") ? obj.get("message").getAsString() : "unknown"));
         return obj.getAsJsonObject("data");
     }
 
