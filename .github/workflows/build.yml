@@ -54,6 +54,11 @@ jobs:
         run: |
           sed -i 's/versionName ".*"/versionName "${{ inputs.version }}"/' app/build.gradle
 
+      - name: Setup Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
       - name: Build ${{ matrix.mode }}-${{ matrix.abi }}
         run: |
           chmod +x gradlew
