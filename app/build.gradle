@@ -92,6 +92,7 @@ dependencies {
     implementation project(':catvod')
     implementation project(':chaquo')
     implementation project(':quickjs')
+    implementation project(':hook')
     implementation 'androidx.appcompat:appcompat:1.7.1'
     implementation 'androidx.core:core-splashscreen:1.2.0'
     implementation 'androidx.media:media:1.7.1'
