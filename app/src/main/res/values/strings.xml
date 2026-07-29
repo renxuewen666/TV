@@ -201,4 +201,26 @@
         <item>Select subtitle track</item>
     </string-array>
 
+    <!-- Login -->
+    <string name="login_title">Account</string>
+    <string name="login_reg_title">Register</string>
+    <string name="login_account_hint">Email / Phone</string>
+    <string name="login_nickname_hint">Nickname</string>
+    <string name="login_password_hint">Password</string>
+    <string name="login_btn">Login</string>
+    <string name="login_reg_btn">Register</string>
+    <string name="login_toggle_register">Create Account</string>
+    <string name="login_toggle_login">Already have account? Login</string>
+    <string name="login_skip">Browse as Guest</string>
+    <string name="login_success">Welcome, %s</string>
+    <string name="login_fail">Login failed, please check your account and password</string>
+    <string name="setting_member_center">Member Center</string>
+    <string name="setting_logout">Logout</string>
+
+    <!-- Trial -->
+    <string name="trial_title">Trial Mode</string>
+    <string name="trial_message">You can continue browsing for free. Login to get full access and unlimited time.</string>
+    <string name="trial_timer">%d minutes %d seconds remaining</string>
+    <string name="trial_login_now">Login Now</string>
+
 </resources>

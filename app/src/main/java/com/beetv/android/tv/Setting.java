@@ -301,4 +301,47 @@ public class Setting {
     public static void putAdminUrl(String url) {
         Prefers.put("admin_url", url);
     }
+
+    public static String getAuthToken() {
+        return Prefers.getString("auth_token", "");
+    }
+
+    public static void putAuthToken(String token) {
+        Prefers.put("auth_token", token);
+    }
+
+    public static String getUserEmail() {
+        return Prefers.getString("user_email", "");
+    }
+
+    public static void putUserEmail(String email) {
+        Prefers.put("user_email", email);
+    }
+
+    public static String getUserNickname() {
+        return Prefers.getString("user_nickname", "");
+    }
+
+    public static void putUserNickname(String nickname) {
+        Prefers.put("user_nickname", nickname);
+    }
+
+    public static int getUserScore() {
+        return Prefers.getInt("user_score", 0);
+    }
+
+    public static void putUserScore(int score) {
+        Prefers.put("user_score", score);
+    }
+
+    public static boolean isLoggedIn() {
+        return !getAuthToken().isEmpty();
+    }
+
+    public static void logout() {
+        Prefers.put("auth_token", "");
+        Prefers.put("user_email", "");
+        Prefers.put("user_nickname", "");
+        Prefers.put("user_score", 0);
+    }
 }

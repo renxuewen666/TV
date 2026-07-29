@@ -31,8 +31,27 @@ public class BeeApi {
         return instance;
     }
 
+    private Request.Builder authBuilder(Request.Builder builder) {
+        String token = Setting.getAuthToken();
+        if (!token.isEmpty()) {
+            builder.addHeader("Authorization", "Bearer " + token);
+        }
+        return builder;
+    }
+
+    private JsonObject parseResponse(String body) throws IOException {
+        JsonObject obj = Json.parse(body).getAsJsonObject();
+        int code = obj.has("code") ? obj.get("code").getAsInt() : 0;
+        if (code != 200) throw new IOException(obj.has("message") ? obj.get("message").getAsString() : "API error");
+        return obj;
+    }
+
+    private JsonObject getData(String body) throws IOException {
+        return parseResponse(body).getAsJsonObject("data");
+    }
+
     public String get(String url) throws IOException {
-        Request request = new Request.Builder().url(url).get().build();
+        Request request = authBuilder(new Request.Builder().url(url).get()).build();
         Response response = OkHttp.client(Constant.TIMEOUT_XML).newCall(request).execute();
         if (!response.isSuccessful()) throw new IOException("HTTP " + response.code());
         String body = response.body() != null ? response.body().string() : "";
@@ -41,11 +60,54 @@ public class BeeApi {
     }
 
     public JsonObject getJson(String url) throws IOException {
-        String body = get(url);
-        JsonObject obj = Json.parse(body).getAsJsonObject();
-        int code = obj.has("code") ? obj.get("code").getAsInt() : 0;
-        if (code != 200) throw new IOException("API error: " + (obj.has("message") ? obj.get("message").getAsString() : "unknown"));
-        return obj.getAsJsonObject("data");
+        return getData(get(url));
+    }
+
+    private String postJson(String url, JsonObject body) throws IOException {
+        Request request = authBuilder(new Request.Builder().url(url))
+            .post(okhttp3.RequestBody.create(body.toString(), okhttp3.MediaType.parse("application/json")))
+            .build();
+        Response response = OkHttp.client(TimeUnit.SECONDS.toMillis(15)).newCall(request).execute();
+        String respBody = response.body() != null ? response.body().string() : "";
+        response.close();
+        if (!response.isSuccessful()) throw new IOException("HTTP " + response.code());
+        return respBody;
+    }
+
+    private JsonObject postJsonGetData(String url, JsonObject body) throws IOException {
+        return getData(postJson(url, body));
+    }
+
+    public JsonObject login(String account, String password) throws IOException {
+        String base = Setting.getAdminUrl();
+        JsonObject body = new JsonObject();
+        body.addProperty("account", account);
+        body.addProperty("password", password);
+        return postJsonGetData(base + "/member-auth/login", body);
+    }
+
+    public JsonObject register(String email, String nickname, String password) throws IOException {
+        String base = Setting.getAdminUrl();
+        JsonObject body = new JsonObject();
+        body.addProperty("email", email);
+        body.addProperty("nickname", nickname);
+        body.addProperty("password", password);
+        return postJsonGetData(base + "/member-auth/register", body);
+    }
+
+    public JsonObject getProfile() throws IOException {
+        String base = Setting.getAdminUrl();
+        return getJson(base + "/member-auth/me");
+    }
+
+    public JsonObject signIn() throws IOException {
+        String base = Setting.getAdminUrl();
+        return postJsonGetData(base + "/user/signin", new JsonObject());
+    }
+
+    public JsonObject getSignStatus() throws IOException {
+        String base = Setting.getAdminUrl();
+        return getJson(base + "/user/signin/status");
     }
 
     public List<Config> fetchApiEndpoints() {
@@ -121,9 +183,8 @@ public class BeeApi {
             JsonObject body = new JsonObject();
             body.addProperty("userId", userId);
             body.addProperty("code", code);
-            Request request = new Request.Builder()
-                .url(url)
-                .post(okhttp3.RequestBody.create(body.toString(), okhttp3.MediaType.parse("application/json")))
+            Request request = authBuilder(new Request.Builder().url(url)
+                .post(okhttp3.RequestBody.create(body.toString(), okhttp3.MediaType.parse("application/json"))))
                 .build();
             Response response = OkHttp.client(TimeUnit.SECONDS.toMillis(15)).newCall(request).execute();
             response.close();

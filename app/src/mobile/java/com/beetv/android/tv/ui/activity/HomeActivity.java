@@ -4,6 +4,8 @@ import android.app.PendingIntent;
 import android.content.Intent;
 import android.content.res.Configuration;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.MenuItem;
 import android.view.View;
 
@@ -17,6 +19,7 @@ import androidx.viewbinding.ViewBinding;
 
 import com.beetv.android.tv.App;
 import com.beetv.android.tv.R;
+import com.beetv.android.tv.Setting;
 import com.beetv.android.tv.Updater;
 import com.beetv.android.tv.api.config.LiveConfig;
 import com.beetv.android.tv.api.config.VodConfig;
@@ -35,6 +38,7 @@ import com.beetv.android.tv.server.Server;
 import com.beetv.android.tv.service.PlaybackService;
 import com.beetv.android.tv.ui.base.BaseActivity;
 import com.beetv.android.tv.ui.custom.FragmentStateManager;
+import com.beetv.android.tv.ui.dialog.LoginDialog;
 import com.beetv.android.tv.ui.fragment.SettingFragment;
 import com.beetv.android.tv.ui.fragment.SettingPlayerFragment;
 import com.beetv.android.tv.ui.fragment.VodFragment;
@@ -48,11 +52,18 @@ import com.google.android.material.navigation.NavigationBarView;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
-public class HomeActivity extends BaseActivity implements NavigationBarView.OnItemSelectedListener {
+import java.util.concurrent.TimeUnit;
+
+public class HomeActivity extends BaseActivity implements NavigationBarView.OnItemSelectedListener, LoginDialog.LoginCallback {
+
+    private static final long TRIAL_DURATION_MS = TimeUnit.MINUTES.toMillis(5);
 
     private FragmentStateManager mManager;
     private ActivityHomeBinding mBinding;
     private int orientation;
+    private Handler mTrialHandler;
+    private Runnable mTrialRunnable;
+    private long mTrialStart;
 
     @Override
     protected ViewBinding getBinding() {
@@ -77,12 +88,14 @@ public class HomeActivity extends BaseActivity implements NavigationBarView.OnIt
         initFragment(savedInstanceState);
         Updater.create().start(this);
         initConfig();
+        initTrial();
     }
 
     @Override
     protected void initEvent() {
         mBinding.navigation.setOnItemSelectedListener(this);
         mBinding.navigation.findViewById(R.id.live).setOnLongClickListener(this::addShortcut);
+        mBinding.trialLoginBtn.setOnClickListener(v -> showLogin());
     }
 
     private void checkAction(Intent intent) {
@@ -222,8 +235,58 @@ public class HomeActivity extends BaseActivity implements NavigationBarView.OnIt
         }
     }
 
+    private void initTrial() {
+        if (Setting.isLoggedIn()) return;
+        mTrialHandler = new Handler(Looper.getMainLooper());
+        mTrialStart = System.currentTimeMillis();
+        mTrialRunnable = () -> {
+            if (!Setting.isLoggedIn()) {
+                mBinding.trialGate.setVisibility(View.VISIBLE);
+            }
+        };
+        mTrialHandler.postDelayed(mTrialRunnable, TRIAL_DURATION_MS);
+    }
+
+    public void showTrialGate() {
+        if (Setting.isLoggedIn()) {
+            mBinding.trialGate.setVisibility(View.GONE);
+            if (mTrialHandler != null && mTrialRunnable != null) {
+                mTrialHandler.removeCallbacks(mTrialRunnable);
+            }
+            return;
+        }
+        long elapsed = System.currentTimeMillis() - mTrialStart;
+        long remaining = TRIAL_DURATION_MS - elapsed;
+        if (remaining > 0) {
+            mBinding.trialGate.setVisibility(View.GONE);
+            if (mTrialHandler != null && mTrialRunnable != null) {
+                mTrialHandler.removeCallbacks(mTrialRunnable);
+                mTrialHandler.postDelayed(mTrialRunnable, remaining);
+            }
+        } else {
+            mBinding.trialGate.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void showLogin() {
+        LoginDialog.create(this, this).show();
+    }
+
+    @Override
+    public void onLoginResult(String email, String nickname, int score) {
+        mBinding.trialGate.setVisibility(View.GONE);
+        if (mTrialHandler != null && mTrialRunnable != null) {
+            mTrialHandler.removeCallbacks(mTrialRunnable);
+        }
+        Notify.show(getString(R.string.login_success, nickname.isEmpty() ? email : nickname));
+    }
+
     @Override
     protected void onDestroy() {
+        if (mTrialHandler != null && mTrialRunnable != null) {
+            mTrialHandler.removeCallbacks(mTrialRunnable);
+            mTrialHandler = null;
+        }
         CacheManager.get().release();
         LiveConfig.get().clear();
         VodConfig.get().clear();

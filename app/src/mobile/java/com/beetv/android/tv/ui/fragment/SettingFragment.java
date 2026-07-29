@@ -16,6 +16,7 @@ import com.beetv.android.tv.BuildConfig;
 import com.beetv.android.tv.R;
 import com.beetv.android.tv.Setting;
 import com.beetv.android.tv.Updater;
+import com.beetv.android.tv.api.config.BeeApi;
 import com.beetv.android.tv.api.config.LiveConfig;
 import com.beetv.android.tv.api.config.VodConfig;
 import com.beetv.android.tv.api.config.WallConfig;
@@ -36,6 +37,7 @@ import com.beetv.android.tv.ui.dialog.AdminUrlDialog;
 import com.beetv.android.tv.ui.dialog.ConfigDialog;
 import com.beetv.android.tv.ui.dialog.HistoryDialog;
 import com.beetv.android.tv.ui.dialog.LiveDialog;
+import com.beetv.android.tv.ui.dialog.LoginDialog;
 import com.beetv.android.tv.ui.dialog.RestoreDialog;
 import com.beetv.android.tv.ui.dialog.SiteDialog;
 import com.beetv.android.tv.utils.FileChooser;
@@ -47,6 +49,7 @@ import com.github.catvod.bean.Doh;
 import com.github.catvod.net.OkHttp;
 import com.github.catvod.utils.Path;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.gson.JsonObject;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
@@ -55,7 +58,7 @@ import org.greenrobot.eventbus.ThreadMode;
 import java.util.ArrayList;
 import java.util.List;
 
-public class SettingFragment extends BaseFragment implements ConfigCallback, SiteCallback, LiveCallback, AdminUrlCallback {
+public class SettingFragment extends BaseFragment implements ConfigCallback, SiteCallback, LiveCallback, AdminUrlCallback, LoginDialog.LoginCallback {
 
     private FragmentSettingBinding mBinding;
     private String[] size;
@@ -97,6 +100,7 @@ public class SettingFragment extends BaseFragment implements ConfigCallback, Sit
         mBinding.versionText.setText(BuildConfig.VERSION_NAME);
         setOtherText();
         setCacheText();
+        updateMemberUI();
     }
 
     private void setOtherText() {
@@ -139,6 +143,9 @@ public class SettingFragment extends BaseFragment implements ConfigCallback, Sit
         mBinding.wallRefresh.setOnClickListener(this::setWallRefresh);
         mBinding.wallRefresh.setOnLongClickListener(this::onWallHistory);
         mBinding.serverUrl.setOnClickListener(this::onServerUrl);
+        mBinding.memberLoginBtn.setOnClickListener(this::onMemberLogin);
+        mBinding.memberSignin.setOnClickListener(this::onMemberSignin);
+        mBinding.memberLogout.setOnClickListener(this::onMemberLogout);
     }
 
     @Override
@@ -303,6 +310,75 @@ public class SettingFragment extends BaseFragment implements ConfigCallback, Sit
 
     private void onServerUrl(View view) {
         AdminUrlDialog.create(requireActivity()).show();
+    }
+
+    private void updateMemberUI() {
+        boolean loggedIn = Setting.isLoggedIn();
+        if (loggedIn) {
+            String nickname = Setting.getUserNickname();
+            int score = Setting.getUserScore();
+            mBinding.memberStatusLabel.setText(nickname.isEmpty() ? Setting.getUserEmail() : nickname);
+            mBinding.memberStatusLabel.setTextColor(0xFF_FFFFFF);
+            mBinding.memberLoginBtn.setText(R.string.login_toggle_register);
+            mBinding.memberLoginBtn.setTextColor(0xFF_64B5F6);
+            mBinding.memberSignin.setVisibility(View.VISIBLE);
+            mBinding.memberScore.setText(score + " pts");
+            mBinding.memberLogout.setVisibility(View.VISIBLE);
+        } else {
+            mBinding.memberStatusLabel.setText(R.string.login_skip);
+            mBinding.memberStatusLabel.setTextColor(0xFF_888888);
+            mBinding.memberLoginBtn.setText(R.string.login_btn);
+            mBinding.memberLoginBtn.setTextColor(0xFF_64B5F6);
+            mBinding.memberSignin.setVisibility(View.GONE);
+            mBinding.memberLogout.setVisibility(View.GONE);
+        }
+    }
+
+    private void onMemberLogin(View view) {
+        if (Setting.isLoggedIn()) {
+            Setting.logout();
+            updateMemberUI();
+            return;
+        }
+        LoginDialog.create(requireActivity(), this).show();
+    }
+
+    @Override
+    public void onLoginResult(String email, String nickname, int score) {
+        updateMemberUI();
+        getRoot().showTrialGate();
+    }
+
+    private void onMemberSignin(View view) {
+        if (!Setting.isLoggedIn()) return;
+        Notify.progress(requireActivity());
+        new Thread(() -> {
+            try {
+                BeeApi.get().signIn();
+                requireActivity().runOnUiThread(() -> {
+                    Notify.dismiss();
+                    Notify.show("Signed in successfully!");
+                    try {
+                        JsonObject status = BeeApi.get().getSignStatus();
+                        int score = status.has("totalScore") ? status.get("totalScore").getAsInt() : 0;
+                        Setting.putUserScore(score);
+                        mBinding.memberScore.setText(score + " pts");
+                    } catch (Exception ignored) {}
+                });
+            } catch (Exception e) {
+                requireActivity().runOnUiThread(() -> {
+                    Notify.dismiss();
+                    Notify.show("Sign in failed: " + e.getMessage());
+                });
+            }
+        }).start();
+    }
+
+    private void onMemberLogout(View view) {
+        Setting.logout();
+        updateMemberUI();
+        getRoot().showTrialGate();
+        Notify.show("Logged out");
     }
 
     @Override
