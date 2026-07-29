@@ -46,7 +46,7 @@ async function bootstrap() {
   if (existsSync(webDist)) {
     expressApp.use(express.static(webDist));
     expressApp.get('*', (req, res, next) => {
-      if (req.path.startsWith('/api') || req.path.startsWith('/m')) return next();
+      if (req.path.startsWith('/api') || req.path.startsWith('/m') || req.path.startsWith('/public')) return next();
       res.sendFile(join(webDist, 'index.html'));
     });
   }
