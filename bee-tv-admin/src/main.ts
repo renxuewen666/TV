@@ -37,6 +37,11 @@ async function bootstrap() {
     });
   }
 
+  const apkDir = join(__dirname, '..', 'public', 'apk');
+  if (existsSync(apkDir)) {
+    expressApp.use('/public/apk', express.static(apkDir));
+  }
+
   const webDist = join(__dirname, '..', '..', 'web', 'dist');
   if (existsSync(webDist)) {
     expressApp.use(express.static(webDist));
