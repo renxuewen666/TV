@@ -354,16 +354,13 @@ public class SettingFragment extends BaseFragment implements ConfigCallback, Sit
         Notify.progress(requireActivity());
         new Thread(() -> {
             try {
-                BeeApi.get().signIn();
+                JsonObject result = BeeApi.get().signIn();
+                int score = result.has("totalScore") ? result.get("totalScore").getAsInt() : 0;
+                Setting.putUserScore(score);
                 requireActivity().runOnUiThread(() -> {
                     Notify.dismiss();
                     Notify.show("Signed in successfully!");
-                    try {
-                        JsonObject status = BeeApi.get().getSignStatus();
-                        int score = status.has("totalScore") ? status.get("totalScore").getAsInt() : 0;
-                        Setting.putUserScore(score);
-                        mBinding.memberScore.setText(score + " pts");
-                    } catch (Exception ignored) {}
+                    mBinding.memberScore.setText(score + " pts");
                 });
             } catch (Exception e) {
                 requireActivity().runOnUiThread(() -> {

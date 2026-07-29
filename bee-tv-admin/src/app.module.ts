@@ -16,6 +16,10 @@ import { DatabaseModule } from './modules/database/database.module';
 import { CompileModule } from './modules/compile/compile.module';
 import { ScoreModule } from './modules/score/score.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { AppAuthModule } from './modules/app-auth/app-auth.module';
+import { ContentModule } from './modules/content/content.module';
+import { PostsModule } from './modules/posts/posts.module';
+import { AppUserModule } from './modules/app-user/app-user.module';
 import { PrismaModule } from './common/prisma.module';
 
 @Module({
@@ -38,6 +42,10 @@ import { PrismaModule } from './common/prisma.module';
     CompileModule,
     ScoreModule,
     DashboardModule,
+    AppAuthModule,
+    ContentModule,
+    PostsModule,
+    AppUserModule,
   ],
 })
 export class AppModule {}

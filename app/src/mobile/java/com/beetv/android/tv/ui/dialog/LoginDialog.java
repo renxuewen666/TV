@@ -94,9 +94,10 @@ public class LoginDialog implements DialogInterface.OnDismissListener {
             try {
                 JsonObject data = BeeApi.get().login(account, password);
                 String token = data.get("token").getAsString();
-                String email = data.has("email") ? data.get("email").getAsString() : account;
-                String nickname = data.has("nickname") ? data.get("nickname").getAsString() : account;
-                int score = data.has("score") ? data.get("score").getAsInt() : 0;
+                JsonObject user = data.has("user") ? data.getAsJsonObject("user") : data;
+                String email = user.has("email") ? user.get("email").getAsString() : account;
+                String nickname = user.has("nickname") ? user.get("nickname").getAsString() : account;
+                int score = user.has("score") ? user.get("score").getAsInt() : 0;
                 Setting.putAuthToken(token);
                 Setting.putUserEmail(email);
                 Setting.putUserNickname(nickname);
@@ -129,7 +130,8 @@ public class LoginDialog implements DialogInterface.OnDismissListener {
             try {
                 JsonObject data = BeeApi.get().register(email, nickname, password);
                 String token = data.get("token").getAsString();
-                int score = data.has("score") ? data.get("score").getAsInt() : 0;
+                JsonObject user = data.has("user") ? data.getAsJsonObject("user") : data;
+                int score = user.has("score") ? user.get("score").getAsInt() : 0;
                 Setting.putAuthToken(token);
                 Setting.putUserEmail(email);
                 Setting.putUserNickname(nickname);

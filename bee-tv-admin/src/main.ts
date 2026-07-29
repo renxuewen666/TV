@@ -26,13 +26,22 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
+  const expressApp = app.getHttpAdapter().getInstance();
+  const express = require('express');
+
+  const mobileDist = join(__dirname, '..', '..', '..', 'bee-tv-mobile', 'dist');
+  if (existsSync(mobileDist)) {
+    expressApp.use('/m', express.static(mobileDist));
+    expressApp.get('/m/*', (req, res) => {
+      res.sendFile(join(mobileDist, 'index.html'));
+    });
+  }
+
   const webDist = join(__dirname, '..', '..', 'web', 'dist');
   if (existsSync(webDist)) {
-    const expressApp = app.getHttpAdapter().getInstance();
-    const express = require('express');
     expressApp.use(express.static(webDist));
     expressApp.get('*', (req, res, next) => {
-      if (req.path.startsWith('/api')) return next();
+      if (req.path.startsWith('/api') || req.path.startsWith('/m')) return next();
       res.sendFile(join(webDist, 'index.html'));
     });
   }

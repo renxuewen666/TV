@@ -237,3 +237,119 @@ model AppChannel {
   status    Int      @default(1)
   createdAt DateTime @default(now())
 }
+
+model AppUser {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  nickname  String
+  avatar    String   @default("")
+  role      String   @default("user")
+  status    Int      @default(1)
+  score     Int      @default(0)
+  memberLevel Int    @default(0)
+  memberExpireAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  posts     Post[]
+  comments  PostComment[]
+  likes     PostLike[]
+  favorites PostFavorite[]
+}
+
+model Post {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  author    AppUser  @relation(fields: [userId], references: [id])
+  text      String   @default("")
+  images    String   @default("")
+  audio     String   @default("")
+  video     String   @default("")
+  topic     String   @default("")
+  status    Int      @default(1)
+  viewCount Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  comments  PostComment[]
+  likes     PostLike[]
+  favorites PostFavorite[]
+}
+
+model PostComment {
+  id        Int      @id @default(autoincrement())
+  postId    Int
+  post      Post     @relation(fields: [postId], references: [id])
+  userId    Int
+  author    AppUser  @relation(fields: [userId], references: [id])
+  content   String
+  status    Int      @default(1)
+  createdAt DateTime @default(now())
+}
+
+model PostLike {
+  id        Int      @id @default(autoincrement())
+  postId    Int
+  post      Post     @relation(fields: [postId], references: [id])
+  userId    Int
+  user      AppUser  @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
+}
+
+model PostFavorite {
+  id        Int      @id @default(autoincrement())
+  postId    Int
+  post      Post     @relation(fields: [postId], references: [id])
+  userId    Int
+  user      AppUser  @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
+}
+
+model UserHistory {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  vodId     String
+  vodName   String
+  vodPic    String   @default("")
+  remark    String   @default("")
+  createdAt DateTime @default(now())
+}
+
+model UserFavorite {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  vodId     String
+  vodName   String
+  vodPic    String   @default("")
+  type      String   @default("")
+  remark    String   @default("")
+  createdAt DateTime @default(now())
+
+  @@unique([userId, vodId])
+}
+
+model AppSignLog {
+  id             Int      @id @default(autoincrement())
+  userId         Int
+  signDate       String
+  consecutiveDays Int     @default(1)
+  reward         Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  @@unique([userId, signDate])
+}
+
+model AppScoreLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  type      String   @default("sign_in")
+  score     Int
+  balance   Int      @default(0)
+  remark    String   @default("")
+  createdAt DateTime @default(now())
+}
+
+
