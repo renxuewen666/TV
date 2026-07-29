@@ -1,6 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import AdmZip from 'adm-zip';
+import { existsSync, readFileSync, mkdirSync, writeFileSync } from 'fs';
+import { join } from 'path';
+
+const CACHE_DIR = join(process.cwd(), 'public', 'apk');
 
 @Injectable()
 export class AppManageService {
@@ -50,7 +54,14 @@ export class AppManageService {
     return { task, artifact };
   }
 
-  async downloadAndExtractApk(task: any, artifactId: number): Promise<{ buffer: Buffer; filename: string }> {
+  async downloadAndExtractApk(task: any, artifactId: number, artifactName: string): Promise<{ buffer: Buffer; filename: string }> {
+    mkdirSync(CACHE_DIR, { recursive: true });
+    const cachePath = join(CACHE_DIR, artifactName + '.apk');
+
+    if (existsSync(cachePath)) {
+      return { buffer: readFileSync(cachePath), filename: artifactName + '.apk' };
+    }
+
     const [owner, repo] = task.githubRepo.split('/');
     const url = `https://api.github.com/repos/${owner}/${repo}/actions/artifacts/${artifactId}/zip`;
 
@@ -71,6 +82,9 @@ export class AppManageService {
     const apkEntry = entries.find(e => e.entryName.endsWith('.apk'));
     if (!apkEntry) throw new NotFoundException('工件中没有APK文件');
 
-    return { buffer: apkEntry.getData(), filename: apkEntry.entryName };
+    const apkData = apkEntry.getData();
+    writeFileSync(cachePath, apkData);
+
+    return { buffer: apkData, filename: artifactName + '.apk' };
   }
 }

@@ -56,7 +56,7 @@ export class AppManageController {
   @Get('download/:name')
   async downloadApp(@Param('name') name: string, @Res() res: Response) {
     const { task, artifact } = await this.appManageService.getArtifactByName(name);
-    const { buffer, filename } = await this.appManageService.downloadAndExtractApk(task, artifact.id);
+    const { buffer, filename } = await this.appManageService.downloadAndExtractApk(task, artifact.id, artifact.name);
 
     res.setHeader('Content-Type', 'application/vnd.android.package-archive');
     res.setHeader('Content-Disposition', `attachment; filename="${artifact.name}.apk"`);
