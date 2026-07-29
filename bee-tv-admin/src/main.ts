@@ -39,7 +39,14 @@ async function bootstrap() {
 
   const apkDir = join(__dirname, '..', '..', 'public', 'apk');
   if (existsSync(apkDir)) {
-    expressApp.use('/public/apk', express.static(apkDir));
+    expressApp.get('/public/apk/:name', (req, res) => {
+      const filePath = join(apkDir, req.params.name);
+      if (existsSync(filePath)) {
+        res.sendFile(filePath);
+      } else {
+        res.status(404).send('Not found');
+      }
+    });
   }
 
   const webDist = join(__dirname, '..', '..', 'web', 'dist');
