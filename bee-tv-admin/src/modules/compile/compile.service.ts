@@ -1,6 +1,11 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { Request, Response } from 'express';
+import AdmZip from 'adm-zip';
+import { existsSync, readFileSync, mkdirSync, writeFileSync } from 'fs';
+import { join } from 'path';
+
+const APK_CACHE_DIR = join(process.cwd(), 'public', 'apk');
 
 @Injectable()
 export class CompileService {
@@ -108,6 +113,8 @@ export class CompileService {
         }
         if (task.status !== 'success') {
           await this.prisma.compileTask.update({ where: { id }, data: { status: 'success', artifactUrl, log: '构建成功' } });
+          this.cacheAllArtifacts(owner, repo, task.githubToken, artifacts);
+          this.syncAppVersions(task, artifacts);
         }
         return { status: 'success', artifactUrl, artifacts, htmlUrl };
       }
@@ -182,5 +189,56 @@ export class CompileService {
       }
     };
     await pump();
+  }
+
+  private async cacheAllArtifacts(owner: string, repo: string, token: string, artifacts: any[]) {
+    mkdirSync(APK_CACHE_DIR, { recursive: true });
+    for (const art of artifacts) {
+      try {
+        const cachePath = join(APK_CACHE_DIR, art.name + '.apk');
+        if (existsSync(cachePath)) continue;
+
+        const url = `https://api.github.com/repos/${owner}/${repo}/actions/artifacts/${art.id}/zip`;
+        const ghRes = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/vnd.github+json',
+            'X-GitHub-Api-Version': '2022-11-28',
+          },
+          redirect: 'follow',
+        });
+        if (!ghRes.ok) continue;
+
+        const zipBuffer = Buffer.from(await ghRes.arrayBuffer());
+        const zip = new AdmZip(zipBuffer);
+        const apkEntry = zip.getEntries().find(e => e.entryName.endsWith('.apk'));
+        if (apkEntry) writeFileSync(cachePath, apkEntry.getData());
+      } catch {}
+    }
+  }
+
+  private async syncAppVersions(task: any, artifacts: any[]) {
+    const channels = new Set(artifacts.map(a => a.name.replace(/-arm.*$|-aarch.*$/i, '')));
+    const versionCode = parseInt(task.version?.replace(/\D/g, '')) || 1;
+    const versionName = task.version || 'latest';
+    const changelog = task.log || '构建成功';
+
+    for (const channel of channels) {
+      const art = artifacts.find(a => a.name === channel + '-arm64_v8a') || artifacts.find(a => a.name.startsWith(channel)) || artifacts[0];
+      if (!art) continue;
+      const downloadUrl = `https://mf.xuewen.plus:7443/api/app-manage/download/${art.name}`;
+
+      const existing = await this.prisma.appVersion.findFirst({ where: { channel } });
+      if (existing) {
+        await this.prisma.appVersion.update({
+          where: { id: existing.id },
+          data: { versionName, versionCode, downloadUrl, changelog },
+        });
+      } else {
+        await this.prisma.appVersion.create({
+          data: { versionName, versionCode, channel, downloadUrl, changelog },
+        });
+      }
+    }
   }
 }
