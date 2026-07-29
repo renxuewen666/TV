@@ -83,7 +83,7 @@ export class CompileService {
   async checkStatus(id: number) {
     const task = await this.prisma.compileTask.findUnique({ where: { id } });
     if (!task) throw new NotFoundException('任务不存在');
-    if (task.status === 'success' || task.status === 'failed') return task;
+    if (task.status === 'failed') return task;
     if (!task.workflowRunId) return { ...task, message: '尚未触发构建' };
 
     const [owner, repo] = task.githubRepo.split('/');
@@ -98,13 +98,17 @@ export class CompileService {
       const htmlUrl = data.html_url || '';
 
       if (conclusion === 'success') {
-        const artifacts = await this.fetchArtifacts(owner, repo, task);
+        const artifactsJson = task.artifacts
+          ? task.artifacts
+          : JSON.stringify(await this.fetchArtifacts(owner, repo, task));
         const artifactUrl = `${htmlUrl}/artifacts`;
-        const artifactsJson = JSON.stringify(artifacts);
-        await this.prisma.compileTask.update({
-          where: { id },
-          data: { status: 'success', artifactUrl, artifacts: artifactsJson, log: '构建成功' },
-        });
+        const artifacts = JSON.parse(artifactsJson);
+        if (task.artifacts !== artifactsJson) {
+          await this.prisma.compileTask.update({ where: { id }, data: { artifacts: artifactsJson } });
+        }
+        if (task.status !== 'success') {
+          await this.prisma.compileTask.update({ where: { id }, data: { status: 'success', artifactUrl, log: '构建成功' } });
+        }
         return { status: 'success', artifactUrl, artifacts, htmlUrl };
       }
       if (conclusion === 'failure' || conclusion === 'cancelled') {
