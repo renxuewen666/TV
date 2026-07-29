@@ -1,5 +1,6 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Res } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { Response } from 'express';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { Public } from '../../common/decorators/public.decorator';
 import { AppManageService } from './app-manage.service';
@@ -50,4 +51,16 @@ export class AppManageController {
   @UseGuards(JwtAuthGuard)
   @Delete('channels/:id')
   deleteChannel(@Param('id') id: string) { return this.appManageService.deleteChannel(+id); }
+
+  @Public()
+  @Get('download/:name')
+  async downloadApp(@Param('name') name: string, @Res() res: Response) {
+    const { task, artifact } = await this.appManageService.getArtifactByName(name);
+    const { buffer, filename } = await this.appManageService.downloadAndExtractApk(task, artifact.id);
+
+    res.setHeader('Content-Type', 'application/vnd.android.package-archive');
+    res.setHeader('Content-Disposition', `attachment; filename="${artifact.name}.apk"`);
+    res.setHeader('Content-Length', buffer.length);
+    res.send(buffer);
+  }
 }

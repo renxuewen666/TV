@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
+import AdmZip from 'adm-zip';
 
 @Injectable()
 export class AppManageService {
@@ -34,4 +35,42 @@ export class AppManageService {
   }
 
   async deleteChannel(id: number) { await this.prisma.appChannel.delete({ where: { id } }); return { success: true }; }
+
+  async getArtifactByName(name: string) {
+    const task = await this.prisma.compileTask.findFirst({
+      where: { status: 'success' },
+      orderBy: { id: 'desc' },
+    });
+    if (!task || !task.artifacts) throw new NotFoundException('无可用构建产物');
+
+    const artifacts = JSON.parse(task.artifacts);
+    const artifact = artifacts.find((a: any) => a.name === name);
+    if (!artifact) throw new NotFoundException(`未找到产物: ${name}`);
+
+    return { task, artifact };
+  }
+
+  async downloadAndExtractApk(task: any, artifactId: number): Promise<{ buffer: Buffer; filename: string }> {
+    const [owner, repo] = task.githubRepo.split('/');
+    const url = `https://api.github.com/repos/${owner}/${repo}/actions/artifacts/${artifactId}/zip`;
+
+    const ghRes = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${task.githubToken}`,
+        'Accept': 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+      redirect: 'follow',
+    });
+
+    if (!ghRes.ok) throw new NotFoundException('下载GitHub工件失败');
+
+    const zipBuffer = Buffer.from(await ghRes.arrayBuffer());
+    const zip = new AdmZip(zipBuffer);
+    const entries = zip.getEntries();
+    const apkEntry = entries.find(e => e.entryName.endsWith('.apk'));
+    if (!apkEntry) throw new NotFoundException('工件中没有APK文件');
+
+    return { buffer: apkEntry.getData(), filename: apkEntry.entryName };
+  }
 }
