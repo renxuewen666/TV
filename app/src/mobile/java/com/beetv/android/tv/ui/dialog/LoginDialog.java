@@ -125,21 +125,23 @@ public class LoginDialog implements DialogInterface.OnDismissListener {
             showError("Please fill in all fields");
             return;
         }
-        if (nickname.isEmpty()) nickname = email;
+        final String registerEmail = email;
+        final String registerPassword = password;
+        final String registerNickname = nickname.isEmpty() ? registerEmail : nickname;
         setLoading(true);
         new Thread(() -> {
             try {
-                JsonObject data = BeeApi.get().register(email, nickname, password);
+                JsonObject data = BeeApi.get().register(registerEmail, registerNickname, registerPassword);
                 String token = data.get("token").getAsString();
                 JsonObject user = data.has("user") ? data.getAsJsonObject("user") : data;
                 int score = user.has("score") ? user.get("score").getAsInt() : 0;
                 Setting.putAuthToken(token);
-                Setting.putUserEmail(email);
-                Setting.putUserNickname(nickname);
+                Setting.putUserEmail(registerEmail);
+                Setting.putUserNickname(registerNickname);
                 Setting.putUserScore(score);
                 dialog.getOwnerActivity().runOnUiThread(() -> {
                     setLoading(false);
-                    if (callback != null) callback.onLoginResult(email, nickname, score);
+                    if (callback != null) callback.onLoginResult(registerEmail, registerNickname, score);
                     dialog.dismiss();
                 });
             } catch (Exception e) {
