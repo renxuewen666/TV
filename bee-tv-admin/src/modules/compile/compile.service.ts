@@ -30,9 +30,9 @@ export class CompileService {
   }
 
   async createTask(data: { name?: string; githubRepo?: string; githubToken?: string; workflowFile?: string; branch?: string; version?: string; versionCode?: number; channel?: string }) {
-    const githubRepo = data.githubRepo || process.env.GITHUB_BUILD_REPO || 'renxuewen666/TV';
+    const githubRepo = this.normalizeGithubRepo(data.githubRepo || process.env.GITHUB_BUILD_REPO || 'renxuewen666/TV');
     const githubToken = data.githubToken || process.env.GITHUB_BUILD_TOKEN || '';
-    if (!githubRepo || !githubToken) throw new BadRequestException('请配置服务端 GitHub 构建令牌');
+    if (!githubToken) throw new BadRequestException('请配置服务端 GitHub 构建令牌');
     return this.prisma.compileTask.create({
       data: {
         name: data.name || '',
@@ -56,8 +56,11 @@ export class CompileService {
     const task = await this.prisma.compileTask.findUnique({ where: { id } });
     if (!task) throw new NotFoundException('任务不存在');
 
-    const [owner, repo] = task.githubRepo.split('/');
-    if (!owner || !repo) throw new BadRequestException('仓库格式错误，应为 owner/repo');
+    const githubRepo = this.normalizeGithubRepo(task.githubRepo);
+    const [owner, repo] = githubRepo.split('/');
+    if (githubRepo !== task.githubRepo) {
+      await this.prisma.compileTask.update({ where: { id }, data: { githubRepo } });
+    }
 
     const url = `https://api.github.com/repos/${owner}/${repo}/actions/workflows/${task.workflowFile}/dispatches`;
     const body: any = { ref: task.branch };
@@ -108,7 +111,8 @@ export class CompileService {
     if (task.status === 'failed') return this.taskDto(task);
     if (!task.workflowRunId) return { ...this.taskDto(task), message: '尚未触发构建' };
 
-    const [owner, repo] = task.githubRepo.split('/');
+    const githubRepo = this.normalizeGithubRepo(task.githubRepo);
+    const [owner, repo] = githubRepo.split('/');
     const url = `https://api.github.com/repos/${owner}/${repo}/actions/runs/${task.workflowRunId}`;
 
     try {
@@ -151,6 +155,16 @@ export class CompileService {
     return this.prisma.compileTask.delete({ where: { id } });
   }
 
+  private normalizeGithubRepo(value: string) {
+    const raw = String(value || '').trim().replace(/\\/g, '/');
+    const sshMatch = raw.match(/^git@github\.com:([^/\s]+)\/([^/\s]+?)(?:\.git)?\/?$/i);
+    const urlMatch = raw.match(/^(?:https?:\/\/)?(?:www\.)?github\.com\/([^/\s]+)\/([^/\s]+?)(?:\.git)?\/?$/i);
+    const shorthandMatch = raw.match(/^([^/\s]+)\/([^/\s]+?)(?:\.git)?\/?$/);
+    const match = sshMatch || urlMatch || shorthandMatch;
+    if (!match) throw new BadRequestException('GitHub 仓库格式错误，请填写 owner/repo 或完整 GitHub 仓库地址');
+    return `${match[1]}/${match[2]}`;
+  }
+
   private taskDto(task: any) {
     const { githubToken, ...safeTask } = task;
     return safeTask;
@@ -182,7 +196,8 @@ export class CompileService {
     const task = await this.prisma.compileTask.findUnique({ where: { id } });
     if (!task) throw new NotFoundException('任务不存在');
 
-    const [owner, repo] = task.githubRepo.split('/');
+    const githubRepo = this.normalizeGithubRepo(task.githubRepo);
+    const [owner, repo] = githubRepo.split('/');
     const url = `https://api.github.com/repos/${owner}/${repo}/actions/artifacts/${artifactId}/zip`;
 
     const ghRes = await fetch(url, {

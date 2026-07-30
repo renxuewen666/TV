@@ -10,6 +10,7 @@ import android.view.inputmethod.EditorInfo;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.FragmentActivity;
 
+import com.beetv.android.tv.R;
 import com.beetv.android.tv.Setting;
 import com.beetv.android.tv.api.config.BeeApi;
 import com.beetv.android.tv.databinding.DialogLoginBinding;

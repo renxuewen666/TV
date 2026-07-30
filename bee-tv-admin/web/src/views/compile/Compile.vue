@@ -45,7 +45,10 @@
     <el-dialog title="新建编译任务" v-model="visible" width="550px">
       <el-form :model="form" label-width="100px">
         <el-form-item label="任务名"><el-input v-model="form.name" placeholder="可选" /></el-form-item>
-        <el-form-item label="GitHub仓库"><el-input v-model="form.githubRepo" placeholder="renxuewen666/TV" /></el-form-item>
+        <el-form-item label="GitHub仓库">
+          <el-input v-model="form.githubRepo" placeholder="renxuewen666/TV 或 https://github.com/renxuewen666/TV" />
+          <div style="font-size:12px;color:#909399;margin-top:4px">支持 owner/repo、GitHub HTTPS 地址或 SSH 地址，保存时会自动转换。</div>
+        </el-form-item>
         <el-form-item label="GitHub Token">
           <el-input v-model="form.githubToken" type="password" show-password placeholder="服务端已配置时可留空" />
         </el-form-item>
