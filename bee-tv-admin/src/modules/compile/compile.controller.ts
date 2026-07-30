@@ -1,12 +1,13 @@
 import { Controller, Get, Post, Delete, Body, Param, Query, UseGuards, Req, Res } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { AdminAuthGuard } from '../../common/guards/admin-auth.guard';
 import { CompileService } from './compile.service';
 import { Request, Response } from 'express';
 
 @ApiTags('APP编译')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, AdminAuthGuard)
 @Controller('compile')
 export class CompileController {
   constructor(private compileService: CompileService) {}

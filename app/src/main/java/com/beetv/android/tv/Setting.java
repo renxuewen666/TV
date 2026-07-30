@@ -106,6 +106,62 @@ public class Setting {
         Prefers.put("buffer", buffer);
     }
 
+    public static int getPlayerMinBufferMs() {
+        return Prefers.getInt("player_min_buffer_ms", 32000);
+    }
+
+    public static void putPlayerMinBufferMs(int value) {
+        Prefers.put("player_min_buffer_ms", value);
+    }
+
+    public static int getPlayerMaxBufferMs() {
+        return Prefers.getInt("player_max_buffer_ms", 64000);
+    }
+
+    public static void putPlayerMaxBufferMs(int value) {
+        Prefers.put("player_max_buffer_ms", value);
+    }
+
+    public static int getPlayerPlaybackBufferMs() {
+        return Prefers.getInt("player_playback_buffer_ms", 2500);
+    }
+
+    public static void putPlayerPlaybackBufferMs(int value) {
+        Prefers.put("player_playback_buffer_ms", value);
+    }
+
+    public static int getPlayerRebufferMs() {
+        return Prefers.getInt("player_rebuffer_ms", 5000);
+    }
+
+    public static void putPlayerRebufferMs(int value) {
+        Prefers.put("player_rebuffer_ms", value);
+    }
+
+    public static int getPlayerBackBufferMs() {
+        return Prefers.getInt("player_back_buffer_ms", 50000);
+    }
+
+    public static void putPlayerBackBufferMs(int value) {
+        Prefers.put("player_back_buffer_ms", value);
+    }
+
+    public static boolean isPlayerCacheEnabled() {
+        return Prefers.getBoolean("player_cache_enabled", true);
+    }
+
+    public static void putPlayerCacheEnabled(boolean enabled) {
+        Prefers.put("player_cache_enabled", enabled);
+    }
+
+    public static int getPlayerCacheMaxMb() {
+        return Math.max(Prefers.getInt("player_cache_max_mb", 1024), 128);
+    }
+
+    public static void putPlayerCacheMaxMb(int value) {
+        Prefers.put("player_cache_max_mb", value);
+    }
+
     public static int getBackground() {
         return Prefers.getInt("background", 2);
     }

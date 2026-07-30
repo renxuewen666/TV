@@ -7,6 +7,9 @@ export class CreateLayoutDto {
   @IsString()
   type: string;
 
+  @IsOptional() @IsString()
+  page?: string;
+
   @IsString()
   template: string;
 
@@ -17,6 +20,9 @@ export class CreateLayoutDto {
 export class UpdateLayoutDto {
   @IsOptional() @IsString()
   name?: string;
+
+  @IsOptional() @IsString()
+  page?: string;
 
   @IsOptional() @IsString()
   template?: string;

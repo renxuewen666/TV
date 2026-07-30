@@ -6,8 +6,9 @@ export interface LoginParams {
 }
 
 export interface RegisterParams {
-  email: string;
-  nickname: string;
+  username?: string;
+  email?: string;
+  nickname?: string;
   password: string;
 }
 

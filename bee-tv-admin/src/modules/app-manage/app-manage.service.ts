@@ -20,7 +20,7 @@ export class AppManageService {
     return this.prisma.appVersion.create({ data });
   }
 
-  async updateVersion(id: number, data: { status?: number }) {
+  async updateVersion(id: number, data: any) {
     return this.prisma.appVersion.update({ where: { id }, data });
   }
 

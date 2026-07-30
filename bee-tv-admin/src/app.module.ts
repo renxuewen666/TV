@@ -20,6 +20,12 @@ import { AppAuthModule } from './modules/app-auth/app-auth.module';
 import { ContentModule } from './modules/content/content.module';
 import { PostsModule } from './modules/posts/posts.module';
 import { AppUserModule } from './modules/app-user/app-user.module';
+import { AdvertisementModule } from './modules/advertisement/advertisement.module';
+import { MarqueeModule } from './modules/marquee/marquee.module';
+import { DanmakuModule } from './modules/danmaku/danmaku.module';
+import { AppConfigModule } from './modules/app-config/app-config.module';
+import { AdminLogModule } from './modules/admin-log/admin-log.module';
+import { FongMiModule } from './modules/fongmi/fongmi.module';
 import { PrismaModule } from './common/prisma.module';
 
 @Module({
@@ -46,6 +52,12 @@ import { PrismaModule } from './common/prisma.module';
     ContentModule,
     PostsModule,
     AppUserModule,
+    AdvertisementModule,
+    MarqueeModule,
+    DanmakuModule,
+    AppConfigModule,
+    AdminLogModule,
+    FongMiModule,
   ],
 })
 export class AppModule {}

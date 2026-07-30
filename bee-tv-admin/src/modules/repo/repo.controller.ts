@@ -3,14 +3,19 @@ import { ApiTags, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { Public } from '../../common/decorators/public.decorator';
 import { RepoService } from './repo.service';
+import { RepoScriptService } from './repo-script.service';
 import { CreateRepoDto, UpdateRepoDto } from './dto/repo.dto';
+import { CreateRepoScriptDto, UpdateRepoScriptDto, QueryRepoScriptDto } from './dto/repo-script.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 
 @ApiTags('仓库配置')
 @Controller('repo')
 export class RepoController {
-  constructor(private repoService: RepoService) {}
+  constructor(
+    private repoService: RepoService,
+    private repoScriptService: RepoScriptService,
+  ) {}
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
@@ -21,6 +26,40 @@ export class RepoController {
   @UseGuards(JwtAuthGuard)
   @Post()
   create(@Body() dto: CreateRepoDto) { return this.repoService.create(dto); }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('scripts')
+  getScripts(@Query() query: QueryRepoScriptDto) { return this.repoScriptService.getScripts(query); }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('scripts')
+  createScript(@Body() dto: CreateRepoScriptDto) { return this.repoScriptService.createScript(dto); }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('scripts/by-repo/:repoId')
+  getScriptsByRepo(@Param('repoId') repoId: string) { return this.repoScriptService.getScriptsByRepo(+repoId); }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Put('scripts/:id')
+  updateScript(@Param('id') id: string, @Body() dto: UpdateRepoScriptDto) { return this.repoScriptService.updateScript(+id, dto); }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Delete('scripts/:id')
+  deleteScript(@Param('id') id: string) { return this.repoScriptService.deleteScript(+id); }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('scripts/:id/test')
+  testScript(@Param('id') id: string) { return this.repoScriptService.testScript(+id); }
+
+  @Public()
+  @Get('active')
+  getActiveRepos() { return this.repoService.getActiveRepos(); }
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
@@ -55,8 +94,4 @@ export class RepoController {
   testSpider(@Param('id') id: string, @Body() body: { action: string; params?: string; jarPort?: number }) {
     return this.repoService.testSpider(+id, body.action, body.params, body.jarPort);
   }
-
-  @Public()
-  @Get('active')
-  getActiveRepos() { return this.repoService.getActiveRepos(); }
 }

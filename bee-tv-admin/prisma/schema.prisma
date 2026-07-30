@@ -23,8 +23,22 @@ model SystemConfig {
   id        Int      @id @default(autoincrement())
   key       String   @unique
   value     String
+  group     String   @default("basic")
   remark    String   @default("")
   updatedAt DateTime @updatedAt
+}
+
+model AdminLog {
+  id        Int      @id @default(autoincrement())
+  adminId   Int      @default(0)
+  admin     String   @default("")
+  action    String
+  module    String   @default("")
+  method    String   @default("")
+  path      String   @default("")
+  ip        String   @default("")
+  remark    String   @default("")
+  createdAt DateTime @default(now())
 }
 
 model MemberLevel {
@@ -37,6 +51,7 @@ model MemberLevel {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   members   Member[]
+  activationCodes ActivationCode[]
 }
 
 model Member {
@@ -46,6 +61,8 @@ model Member {
   levelId    Int
   level      MemberLevel @relation(fields: [levelId], references: [id])
   score      Int         @default(0)
+  balance    Float       @default(0)
+  status     Int         @default(1)
   expireAt   DateTime?
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
@@ -106,9 +123,10 @@ model CompileTask {
   githubRepo    String
   githubToken   String
   workflowFile  String   @default("build.yml")
-  branch        String   @default("main")
+  branch        String   @default("release")
   version       String   @default("")
-  channel       String   @default("default")
+  versionCode   Int      @default(0)
+  channel       String   @default("all")
   status        String   @default("pending")
   workflowRunId String   @default("")
   artifactUrl   String   @default("")
@@ -119,13 +137,14 @@ model CompileTask {
 }
 
 model ActivationCode {
-  id        Int      @id @default(autoincrement())
-  code      String   @unique
+  id        Int          @id @default(autoincrement())
+  code      String       @unique
   levelId   Int
-  status    Int      @default(0)
-  usedBy    String   @default("")
+  level     MemberLevel  @relation(fields: [levelId], references: [id])
+  status    Int          @default(0)
+  usedBy    String       @default("")
   usedAt    DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime     @default(now())
 }
 
 model PaymentConfig {
@@ -211,11 +230,14 @@ model HomeLayout {
   id        Int      @id @default(autoincrement())
   name      String
   type      String   @default("mobile")
+  page      String   @default("home")
   template  String   @default("classic")
   config    String
   status    Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([type, page, status, updatedAt])
 }
 
 model AppVersion {
@@ -225,6 +247,7 @@ model AppVersion {
   channel     String   @default("default")
   downloadUrl String
   changelog   String   @default("")
+  packageSize String   @default("")
   forceUpdate Int      @default(0)
   status      Int      @default(1)
   createdAt   DateTime @default(now())
@@ -236,6 +259,33 @@ model AppChannel {
   packageId String   @default("")
   status    Int      @default(1)
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// FongMi/TVBox client application identity and runtime policy.
+model ClientApp {
+  id            Int      @id @default(autoincrement())
+  name          String
+  appId         String   @unique
+  appKey        String
+  qqGroup       String   @default("")
+  packageId     String   @default("")
+  platform      String   @default("tv")
+  loginLimit    Int      @default(3)
+  operationMode String   @default("all_free")
+  logo          String   @default("")
+  splash        String   @default("")
+  backdrop      String   @default("")
+  playerImage   String   @default("")
+  serviceImage       String   @default("")
+  about              String   @default("")
+  runtimeConfig      String   @default("")
+  registerPolicy     Int      @default(-1)
+  autoRegisterPolicy Int      @default(-1)
+  emailPolicy        Int      @default(-1)
+  status             Int      @default(1)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model AppUser {
@@ -247,6 +297,7 @@ model AppUser {
   role      String   @default("user")
   status    Int      @default(1)
   score     Int      @default(0)
+  balance   Float    @default(0)
   memberLevel Int    @default(0)
   memberExpireAt DateTime?
   createdAt DateTime @default(now())
@@ -255,6 +306,23 @@ model AppUser {
   comments  PostComment[]
   likes     PostLike[]
   favorites PostFavorite[]
+  sessions  ClientSession[]
+}
+
+// Device-bound login records for FongMi/TVBox and mobile clients.
+model ClientSession {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      AppUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  appId     String   @default("default")
+  deviceId  String   @default("")
+  tokenId   String   @unique
+  expireAt  DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, appId, deviceId])
+  @@index([userId, appId, createdAt])
 }
 
 model Post {
@@ -316,6 +384,7 @@ model UserHistory {
   vodPic    String   @default("")
   remark    String   @default("")
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model UserFavorite {
@@ -327,6 +396,7 @@ model UserFavorite {
   type      String   @default("")
   remark    String   @default("")
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([userId, vodId])
 }
@@ -352,4 +422,117 @@ model AppScoreLog {
   createdAt DateTime @default(now())
 }
 
+// ==================== Phase 2: 广告与弹幕管理 ====================
 
+model Advertisement {
+  id        Int       @id @default(autoincrement())
+  title     String
+  image     String
+  link      String    @default("")
+  position  String    @default("mobile_home")
+  appIds    String    @default("")
+  sort      Int       @default(0)
+  status    Int       @default(1)
+  startAt   DateTime?
+  endAt     DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Marquee {
+  id        Int      @id @default(autoincrement())
+  content   String
+  color     String   @default("#FFFFFF")
+  bgColor   String   @default("#000000")
+  speed     Int      @default(50)
+  position  String   @default("top")
+  appIds    String   @default("")
+  sort      Int      @default(0)
+  status    Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DanmakuConfig {
+  id             Int      @id @default(autoincrement())
+  name           String
+  apiUrl         String
+  method         String   @default("GET")
+  headers        String   @default("")
+  params         String   @default("")
+  urlKeywords    String   @default("")
+  keywordMode    String   @default("include")
+  appIds         String   @default("")
+  status         Int      @default(1)
+  sort           Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// ==================== Phase 3: 会员管理增强 ====================
+
+model MemberGroup {
+  id          Int      @id @default(autoincrement())
+  name        String
+  levelId     Int      @default(0)
+  price       Float    @default(0)
+  duration    Int      @default(30)
+  isPermanent Boolean  @default(false)
+  description String   @default("")
+  discount    Float    @default(1.0)
+  dailyScore  Int      @default(0)
+  status      Int      @default(1)
+  sort        Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model MemberRule {
+  id        Int      @id @default(autoincrement())
+  name      String
+  type      String   @default("play_quality")
+  value     String   @default("")
+  levelId   Int      @default(0)
+  status    Int      @default(1)
+  sort      Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model BalanceLog {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  type      String   @default("recharge")
+  amount    Float
+  balance   Float    @default(0)
+  remark    String   @default("")
+  orderId   String   @default("")
+  createdAt DateTime @default(now())
+}
+
+// ==================== Phase 6: 多仓管增强 ====================
+
+model RepoScript {
+  id        Int      @id @default(autoincrement())
+  repoId    Int      @default(0)
+  name      String
+  type      String   @default("js")
+  content   String   @default("")
+  status    Int      @default(1)
+  sort      Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ==================== Phase 7: APP配置下发 ====================
+
+model AppConfig {
+  id        Int      @id @default(autoincrement())
+  appId     String
+  config    String   @default("")
+  status    Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([appId])
+}

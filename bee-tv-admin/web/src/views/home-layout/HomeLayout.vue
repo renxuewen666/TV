@@ -11,7 +11,7 @@
     <el-table :data="list" border style="margin-top:12px">
       <el-table-column prop="name" label="名称" />
       <el-table-column prop="template" label="模板">
-        <template #default="{row}">{{ { classic:'经典模式', simple:'简洁模式', tv:'TV模式' }[row.template] || row.template }}</template>
+        <template #default="{row}">{{ templateLabel(row.template) }}</template>
       </el-table-column>
       <el-table-column prop="status" label="状态">
         <template #default="{row}">
@@ -53,6 +53,7 @@ const list = ref<any[]>([])
 const visible = ref(false)
 const activeType = ref('mobile')
 const form = ref<any>({})
+const templateLabel = (template: string) => ({ classic: '经典模式', simple: '简洁模式', tv: 'TV模式' } as Record<string, string>)[template] || template
 
 const load = async () => {
   const res: any = await homeLayoutApi.list(activeType.value)

@@ -2,7 +2,7 @@
   <el-card>
     <template #header>
       <div style="display:flex;justify-content:space-between;align-items:center">
-        <span>易支付配置</span>
+        <span>支付配置（易支付商户）</span>
         <el-button type="primary" @click="openDialog()">添加配置</el-button>
       </div>
     </template>
@@ -25,7 +25,7 @@
       <el-form :model="form" label-width="100px">
         <el-form-item label="名称"><el-input v-model="form.name" /></el-form-item>
         <el-form-item label="商户ID(PID)"><el-input v-model="form.pid" /></el-form-item>
-        <el-form-item label="商户密钥"><el-input v-model="form.key" /></el-form-item>
+        <el-form-item label="商户密钥"><el-input v-model="form.key" type="password" show-password /></el-form-item>
         <el-form-item label="接口地址"><el-input v-model="form.apiUrl" /></el-form-item>
         <el-form-item label="回调地址"><el-input v-model="form.notifyUrl" /></el-form-item>
         <el-form-item label="跳转地址"><el-input v-model="form.returnUrl" /></el-form-item>
@@ -39,25 +39,6 @@
       </template>
     </el-dialog>
   </el-card>
-
-  <el-card style="margin-top:16px">
-    <template #header>充值订单</template>
-    <el-table :data="orders" border>
-      <el-table-column prop="orderNo" label="订单号" width="180" />
-      <el-table-column prop="tradeNo" label="交易号" width="180" />
-      <el-table-column prop="userId" label="用户" width="120" />
-      <el-table-column prop="amount" label="金额" width="80" />
-      <el-table-column prop="payType" label="支付方式" width="80" />
-      <el-table-column prop="status" label="状态" width="80">
-        <template #default="{ row }">
-          <el-tag :type="row.status === 1 ? 'success' : 'warning'">{{ row.status === 1 ? '已支付' : '待支付' }}</el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column prop="createdAt" label="创建时间" width="170" />
-      <el-table-column prop="paidAt" label="支付时间" width="170" />
-    </el-table>
-    <el-pagination style="margin-top:12px" background layout="prev,pager,next" :total="orderTotal" :page-size="20" @current-change="loadOrders" />
-  </el-card>
 </template>
 
 <script setup lang="ts">
@@ -66,23 +47,16 @@ import { epayApi } from '@/api'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const list = ref<any[]>([])
-const orders = ref<any[]>([])
-const orderTotal = ref(0)
 const visible = ref(false)
 const editing = ref<any>({})
 const form = ref({ name: '', pid: '', key: '', apiUrl: '', notifyUrl: '', returnUrl: '', status: 1 })
-
-onMounted(() => { loadConfigs(); loadOrders() })
 
 const loadConfigs = async () => {
   const res: any = await epayApi.getConfigs()
   list.value = res.data || []
 }
-const loadOrders = async (page = 1) => {
-  const res: any = await epayApi.getOrders({ page, size: 20 })
-  orders.value = res.data?.list || []
-  orderTotal.value = res.data?.total || 0
-}
+
+onMounted(loadConfigs)
 
 const openDialog = (row?: any) => {
   if (row) { editing.value = row; form.value = { ...row } }

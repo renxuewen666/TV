@@ -14,3 +14,12 @@ project.ext {
     media3Version = '1.8.0'
     okhttpVersion = '5.3.2'
 }
+
+// CI or restricted local environments can isolate generated outputs without touching existing build artifacts.
+def buildOutputRoot = providers.gradleProperty('buildOutputRoot').orNull
+if (buildOutputRoot) {
+    allprojects { project ->
+        def projectFolder = project.path == ':' ? 'root' : project.path.substring(1).replace(':', '/')
+        project.layout.buildDirectory.set(new File(buildOutputRoot, projectFolder))
+    }
+}

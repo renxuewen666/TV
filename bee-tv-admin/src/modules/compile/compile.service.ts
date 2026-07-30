@@ -14,24 +14,40 @@ export class CompileService {
   async getTasks(page = 1, size = 20) {
     const skip = (page - 1) * size;
     const [list, total] = await Promise.all([
-      this.prisma.compileTask.findMany({ skip, take: size, orderBy: { createdAt: 'desc' } }),
+      this.prisma.compileTask.findMany({
+        skip,
+        take: size,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true, name: true, githubRepo: true, workflowFile: true, branch: true, version: true,
+          versionCode: true, channel: true, status: true, workflowRunId: true, artifactUrl: true,
+          artifacts: true, log: true, createdAt: true, updatedAt: true,
+        },
+      }),
       this.prisma.compileTask.count(),
     ]);
     return { list, total, page, size };
   }
 
-  async createTask(data: { name?: string; githubRepo: string; githubToken: string; workflowFile?: string; branch?: string; version?: string; channel?: string }) {
-    if (!data.githubRepo || !data.githubToken) throw new BadRequestException('GitHub仓库和Token不能为空');
+  async createTask(data: { name?: string; githubRepo?: string; githubToken?: string; workflowFile?: string; branch?: string; version?: string; versionCode?: number; channel?: string }) {
+    const githubRepo = data.githubRepo || process.env.GITHUB_BUILD_REPO || 'renxuewen666/TV';
+    const githubToken = data.githubToken || process.env.GITHUB_BUILD_TOKEN || '';
+    if (!githubRepo || !githubToken) throw new BadRequestException('请配置服务端 GitHub 构建令牌');
     return this.prisma.compileTask.create({
       data: {
         name: data.name || '',
-        githubRepo: data.githubRepo,
-        githubToken: data.githubToken,
+        githubRepo,
+        githubToken,
         workflowFile: data.workflowFile || 'build.yml',
-        branch: data.branch || 'main',
+        branch: data.branch || 'release',
         version: data.version || '',
-        channel: data.channel || 'default',
+        versionCode: Number.isInteger(data.versionCode) && Number(data.versionCode) > 0 ? Number(data.versionCode) : 0,
+        channel: data.channel || 'all',
         status: 'pending',
+      },
+      select: {
+        id: true, name: true, githubRepo: true, workflowFile: true, branch: true, version: true,
+        versionCode: true, channel: true, status: true, createdAt: true, updatedAt: true,
       },
     });
   }
@@ -45,11 +61,10 @@ export class CompileService {
 
     const url = `https://api.github.com/repos/${owner}/${repo}/actions/workflows/${task.workflowFile}/dispatches`;
     const body: any = { ref: task.branch };
-    if (task.version || task.channel) {
-      body.inputs = {};
-      if (task.version) body.inputs.version = task.version;
-      if (task.channel) body.inputs.channel = task.channel;
-    }
+    body.inputs = {};
+    if (task.version) body.inputs.version = task.version;
+    if (task.versionCode > 0) body.inputs.version_code = String(task.versionCode);
+    if (task.channel) body.inputs.channel = task.channel;
 
     try {
       const response = await fetch(url, {
@@ -68,13 +83,15 @@ export class CompileService {
         throw new BadRequestException(`触发失败: ${response.status} ${err}`);
       }
 
-      const runsUrl = `https://api.github.com/repos/${owner}/${repo}/actions/runs?per_page=1&branch=${task.branch}`;
+      const dispatchedAt = Date.now();
+      const runsUrl = `https://api.github.com/repos/${owner}/${repo}/actions/workflows/${task.workflowFile}/runs?event=workflow_dispatch&branch=${task.branch}&per_page=10`;
       await new Promise(r => setTimeout(r, 3000));
       const runsRes = await fetch(runsUrl, {
         headers: { 'Authorization': `Bearer ${task.githubToken}`, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' },
       });
       const runsData = await runsRes.json();
-      const runId = runsData.workflow_runs?.[0]?.id?.toString() || '';
+      const run = (runsData.workflow_runs || []).find((item: any) => new Date(item.created_at).getTime() >= dispatchedAt - 10000);
+      const runId = run?.id?.toString() || '';
 
       await this.prisma.compileTask.update({ where: { id }, data: { status: 'running', workflowRunId: runId, log: '构建已触发' } });
 
@@ -88,8 +105,8 @@ export class CompileService {
   async checkStatus(id: number) {
     const task = await this.prisma.compileTask.findUnique({ where: { id } });
     if (!task) throw new NotFoundException('任务不存在');
-    if (task.status === 'failed') return task;
-    if (!task.workflowRunId) return { ...task, message: '尚未触发构建' };
+    if (task.status === 'failed') return this.taskDto(task);
+    if (!task.workflowRunId) return { ...this.taskDto(task), message: '尚未触发构建' };
 
     const [owner, repo] = task.githubRepo.split('/');
     const url = `https://api.github.com/repos/${owner}/${repo}/actions/runs/${task.workflowRunId}`;
@@ -132,6 +149,11 @@ export class CompileService {
   async deleteTask(id: number) {
     await this.prisma.compileTask.findUnique({ where: { id } }).then(r => { if (!r) throw new NotFoundException('任务不存在'); });
     return this.prisma.compileTask.delete({ where: { id } });
+  }
+
+  private taskDto(task: any) {
+    const { githubToken, ...safeTask } = task;
+    return safeTask;
   }
 
   private async fetchArtifacts(owner: string, repo: string, task: any) {
@@ -218,17 +240,21 @@ export class CompileService {
   }
 
   private async syncAppVersions(task: any, artifacts: any[]) {
-    const channels = new Set(artifacts.map(a => a.name.replace(/-arm.*$|-aarch.*$/i, '')));
-    const versionCode = parseInt(task.version?.replace(/\D/g, '')) || 1;
+    const targets = [
+      { artifactPrefix: 'leanback-', channel: '10000' },
+      { artifactPrefix: 'mobile-', channel: '10001' },
+    ];
+    const versionCode = task.versionCode > 0 ? task.versionCode : parseInt(task.version?.replace(/\D/g, '')) || 1;
     const versionName = task.version || 'latest';
     const changelog = task.log || '构建成功';
 
-    for (const channel of channels) {
-      const art = artifacts.find(a => a.name === channel + '-arm64_v8a') || artifacts.find(a => a.name.startsWith(channel)) || artifacts[0];
+    for (const target of targets) {
+      if (task.channel !== 'all' && task.channel !== target.channel) continue;
+      const art = artifacts.find((item) => item.name === `${target.artifactPrefix}arm64_v8a`)
+        || artifacts.find((item) => item.name.startsWith(target.artifactPrefix));
       if (!art) continue;
       const downloadUrl = `https://mf.xuewen.plus:7443/api/app-manage/download/${art.name}`;
-
-      const existing = await this.prisma.appVersion.findFirst({ where: { channel } });
+      const existing = await this.prisma.appVersion.findFirst({ where: { channel: target.channel }, orderBy: { versionCode: 'desc' } });
       if (existing) {
         await this.prisma.appVersion.update({
           where: { id: existing.id },
@@ -236,7 +262,7 @@ export class CompileService {
         });
       } else {
         await this.prisma.appVersion.create({
-          data: { versionName, versionCode, channel, downloadUrl, changelog },
+          data: { versionName, versionCode, channel: target.channel, downloadUrl, changelog },
         });
       }
     }

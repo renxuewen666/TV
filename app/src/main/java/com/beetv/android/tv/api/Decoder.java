@@ -34,6 +34,7 @@ public class Decoder {
     private static String verify(String url, String data) throws Exception {
         if (data.isEmpty()) throw new Exception();
         if (Json.isObj(data)) return fix(url, data);
+        if (data.startsWith("lvDou+")) data = Ui6Decoder.decrypt(data.substring(6));
         if (data.contains("**")) data = base64(data);
         if (data.startsWith("2423")) data = cbc(data);
         return fix(url, data);

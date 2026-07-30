@@ -7,7 +7,7 @@
     <el-table :data="list" border>
       <el-table-column prop="name" label="名称" />
       <el-table-column prop="type" label="类型">
-        <template #default="{row}">{{ {0:'点播',1:'直播',2:'壁纸'}[row.type] }}</template>
+        <template #default="{row}">{{ apiTypeLabel(row.type) }}</template>
       </el-table-column>
       <el-table-column prop="url" label="地址" show-overflow-tooltip />
       <el-table-column prop="remark" label="备注" />
@@ -37,7 +37,7 @@
     <el-dialog v-model="testVisible" title="接口测试" width="600px">
       <el-descriptions :column="2" border style="margin-bottom:12px">
         <el-descriptions-item label="名称">{{ testData?.endpoint }}</el-descriptions-item>
-        <el-descriptions-item label="类型">{{ {0:'点播',1:'直播',2:'壁纸'}[testData?.type] }}</el-descriptions-item>
+        <el-descriptions-item label="类型">{{ apiTypeLabel(testData?.type) }}</el-descriptions-item>
         <el-descriptions-item label="请求URL" :span="2">{{ testData?.targetUrl }}</el-descriptions-item>
         <el-descriptions-item label="HTTP状态">{{ testData?.httpStatus }}</el-descriptions-item>
         <el-descriptions-item label="响应耗时">{{ testData?.elapsed }}ms</el-descriptions-item>
@@ -68,6 +68,7 @@ const testing = ref(false)
 const form = ref<any>({})
 const testData = ref<any>(null)
 const currentTestId = ref(0)
+const apiTypeLabel = (type: number) => ({ 0: '点播', 1: '直播', 2: '壁纸' } as Record<number, string>)[Number(type)] || '未知'
 
 const formatResult = (data: any) => {
   if (typeof data === 'string') {

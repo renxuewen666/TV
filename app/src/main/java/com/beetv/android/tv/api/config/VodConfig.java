@@ -112,6 +112,8 @@ public class VodConfig {
 
     private void loadConfig(int id, Config config, Callback callback) {
         try {
+            if (config.isEmpty()) config = Ui6Config.getDefaultVodConfig();
+            this.config = config;
             OkHttp.cancel(TAG);
             Server.get().start();
             String json = Decoder.getJson(UrlUtil.convert(config.getUrl()), TAG);
@@ -121,7 +123,7 @@ public class VodConfig {
             e.printStackTrace();
             if (isCanceled(e)) return;
             if (taskId.get() != id) return;
-            if (TextUtils.isEmpty(config.getUrl())) App.post(() -> callback.error(""));
+            if (TextUtils.isEmpty(config.getUrl())) App.post(() -> callback.error(e.getMessage() == null ? "Unable to load the default repository" : e.getMessage()));
             else App.post(() -> callback.error(Notify.getError(R.string.error_config_get, e)));
         }
     }

@@ -13,7 +13,7 @@ export class HomeLayoutController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Get()
-  findAll(@Query('type') type?: string) { return this.homeLayoutService.findAll(type); }
+  findAll(@Query('type') type?: string, @Query('page') page?: string) { return this.homeLayoutService.findAll(type, page); }
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)

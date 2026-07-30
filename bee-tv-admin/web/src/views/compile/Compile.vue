@@ -7,7 +7,7 @@
       </div>
     </template>
     <el-alert type="info" :closable="false" show-icon style="margin-bottom:12px">
-      通过在GitHub仓库配置Actions工作流，后台可远程触发CI构建APK。工作流示例见下方说明。
+      使用 release 分支的 GitHub Actions 构建。TV 更新通道为 10000，手机更新通道为 10001；令牌建议仅配置在服务器环境变量中。
     </el-alert>
     <el-table :data="list" border>
       <el-table-column prop="name" label="任务名" width="120" />
@@ -31,7 +31,7 @@
                 <el-button size="small" type="primary">下载产物</el-button>
               </template>
               <div v-for="a in parseArtifacts(row.artifacts)" :key="a.id" style="padding:4px 0">
-                <el-link type="primary" :href="getDownloadUrl(row.id, a.id)" target="_blank" :underline="false">
+                <el-link type="primary" :underline="false" @click="downloadArtifact(row.id, a)">
                   {{ a.name }} ({{ formatSize(a.size) }})
                 </el-link>
               </div>
@@ -45,14 +45,15 @@
     <el-dialog title="新建编译任务" v-model="visible" width="550px">
       <el-form :model="form" label-width="100px">
         <el-form-item label="任务名"><el-input v-model="form.name" placeholder="可选" /></el-form-item>
-        <el-form-item label="GitHub仓库" required><el-input v-model="form.githubRepo" placeholder="owner/repo" /></el-form-item>
-        <el-form-item label="GitHub Token" required>
-          <el-input v-model="form.githubToken" type="password" show-password placeholder="ghp_xxx" />
+        <el-form-item label="GitHub仓库"><el-input v-model="form.githubRepo" placeholder="renxuewen666/TV" /></el-form-item>
+        <el-form-item label="GitHub Token">
+          <el-input v-model="form.githubToken" type="password" show-password placeholder="服务端已配置时可留空" />
         </el-form-item>
         <el-form-item label="工作流文件"><el-input v-model="form.workflowFile" placeholder="build.yml" /></el-form-item>
-        <el-form-item label="分支"><el-input v-model="form.branch" placeholder="main" /></el-form-item>
-        <el-form-item label="版本号"><el-input v-model="form.version" placeholder="1.0.0" /></el-form-item>
-        <el-form-item label="渠道"><el-input v-model="form.channel" placeholder="default" /></el-form-item>
+        <el-form-item label="分支"><el-input v-model="form.branch" placeholder="release" /></el-form-item>
+        <el-form-item label="版本号"><el-input v-model="form.version" placeholder="4.9.10" /></el-form-item>
+        <el-form-item label="版本码"><el-input-number v-model="form.versionCode" :min="1" :step="1" placeholder="留空自动生成" /></el-form-item>
+        <el-form-item label="构建目标"><el-select v-model="form.channel"><el-option label="TV + 手机" value="all" /><el-option label="TV（10000）" value="10000" /><el-option label="手机（10001）" value="10001" /></el-select></el-form-item>
       </el-form>
       <el-alert type="warning" :closable="false" show-icon style="margin-top:12px">
         Token需要 repo 和 workflow 权限。在 GitHub Settings > Developer settings > Personal access tokens 创建。
@@ -69,7 +70,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 
 const list = ref<any[]>([])
 const visible = ref(false)
-const form = ref({ name: '', githubRepo: '', githubToken: '', workflowFile: 'build.yml', branch: 'main', version: '', channel: 'default' })
+const form = ref({ name: '', githubRepo: 'renxuewen666/TV', githubToken: '', workflowFile: 'build.yml', branch: 'release', version: '', versionCode: undefined as number | undefined, channel: 'all' })
 const statusLabel: Record<string, string> = { pending: '待触发', running: '构建中', success: '成功', failed: '失败' }
 const statusType: Record<string, string> = { pending: 'info', running: 'warning', success: 'success', failed: 'danger' }
 
@@ -81,7 +82,7 @@ const loadData = async () => {
 }
 
 const openDialog = () => {
-  form.value = { name: '', githubRepo: '', githubToken: '', workflowFile: 'build.yml', branch: 'main', version: '', channel: 'default' }
+  form.value = { name: '', githubRepo: 'renxuewen666/TV', githubToken: '', workflowFile: 'build.yml', branch: 'release', version: '', versionCode: undefined, channel: 'all' }
   visible.value = true
 }
 
@@ -113,9 +114,14 @@ const parseArtifacts = (artifacts: string) => {
   try { return JSON.parse(artifacts) } catch { return [] }
 }
 
-const getDownloadUrl = (taskId: number, artifactId: number) => {
-  const base = import.meta.env.VITE_API_BASE_URL || ''
-  return `${base}/compile/${taskId}/download/${artifactId}`
+const downloadArtifact = async (taskId: number, artifact: any) => {
+  const blob = await compileApi.download(taskId, artifact.id)
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `${artifact.name}.zip`
+  link.click()
+  URL.revokeObjectURL(url)
 }
 
 const formatSize = (bytes: number) => {

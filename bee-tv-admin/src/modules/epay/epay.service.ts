@@ -1,10 +1,14 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import * as crypto from 'crypto';
+import { MembershipGrantService } from '../member/membership-grant.service';
 
 @Injectable()
 export class EpayService {
-  constructor(private prisma: PrismaClient) {}
+  constructor(
+    private prisma: PrismaClient,
+    private membershipGrantService: MembershipGrantService,
+  ) {}
 
   async getConfigs() {
     return this.prisma.epayConfig.findMany({ where: { status: 1 } });
@@ -30,14 +34,19 @@ export class EpayService {
     return this.prisma.epayConfig.delete({ where: { id } });
   }
 
-  async createOrder(configId: number, userId: string, levelId: number, payType: string) {
-    const config = await this.getConfig(configId);
-    const level = await this.prisma.memberLevel.findUnique({ where: { id: levelId } });
-    if (!level) throw new NotFoundException('会员等级不存在');
+  async createOrder(configId: number, appUserId: number, levelId: number, payType: string) {
+    const [config, user, level] = await Promise.all([
+      this.getConfig(configId),
+      this.prisma.appUser.findUnique({ where: { id: appUserId } }),
+      this.prisma.memberLevel.findUnique({ where: { id: levelId } }),
+    ]);
+    if (!user || user.status !== 1) throw new NotFoundException('应用用户不存在或已禁用');
+    if (!level || level.status !== 1) throw new NotFoundException('会员套餐不存在或已停用');
+    if (!Number.isFinite(level.price) || level.price < 0) throw new BadRequestException('会员套餐价格无效');
 
     const orderNo = this.genOrderNo();
     const order = await this.prisma.paymentOrder.create({
-      data: { orderNo, userId, levelId, amount: level.price, channel: 'epay', payType, status: 0 },
+      data: { orderNo, userId: String(appUserId), levelId, amount: level.price, channel: 'epay', payType, status: 0 },
     });
 
     const signStr = `pid=${config.pid}&type=${payType}&out_trade_no=${orderNo}&notify_url=${config.notifyUrl}&return_url=${config.returnUrl}&name=${encodeURIComponent(level.name)}&money=${level.price}`;
@@ -65,21 +74,27 @@ export class EpayService {
     const expectedSign = crypto.createHash('md5').update(signStr + config.key).digest('hex');
     if (sign !== expectedSign) return 'fail';
 
-    await this.prisma.paymentOrder.update({
-      where: { id: order.id },
-      data: { status: 1, tradeNo: trade_no, paidAt: new Date() },
-    });
+    if (Number(money) !== order.amount) return 'fail';
+    const appUserId = Number(order.userId);
+    if (!Number.isInteger(appUserId) || appUserId <= 0) return 'fail';
 
-    const level = await this.prisma.memberLevel.findUnique({ where: { id: order.levelId } });
-    if (level) {
-      const expireAt = new Date(Date.now() + level.duration * 24 * 60 * 60 * 1000);
-      const existing = await this.prisma.member.findUnique({ where: { userId: order.userId } });
-      if (existing) {
-        const base = existing.expireAt && existing.expireAt > new Date() ? existing.expireAt : new Date();
-        await this.prisma.member.update({ where: { id: existing.id }, data: { levelId: level.id, expireAt: new Date(base.getTime() + level.duration * 24 * 60 * 60 * 1000) } });
-      } else {
-        await this.prisma.member.create({ data: { userId: order.userId, levelId: level.id, deviceId: '', expireAt } });
-      }
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        const latestOrder = await tx.paymentOrder.findUnique({ where: { id: order.id } });
+        if (!latestOrder || latestOrder.status === 1) return;
+        await this.membershipGrantService.grantInTransaction(tx, {
+          appUserId,
+          levelId: latestOrder.levelId,
+          source: 'epay',
+          referenceId: latestOrder.orderNo,
+        });
+        await tx.paymentOrder.update({
+          where: { id: latestOrder.id },
+          data: { status: 1, tradeNo: trade_no, paidAt: new Date() },
+        });
+      });
+    } catch {
+      return 'fail';
     }
 
     return 'success';

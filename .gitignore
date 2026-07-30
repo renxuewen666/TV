@@ -3,6 +3,11 @@
 *.jks
 lib-*.aar
 *build
+/.build-verify/
+/bee-tv-admin/web/.build-verify/
 /media*
 /Release
 /local.properties
+bee-tv-admin/data/
+bee-tv-mobile/*.tsbuildinfo
+bee-tv-mobile/vite.config.ts.timestamp-*.mjs

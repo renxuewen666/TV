@@ -3,6 +3,8 @@ plugins {
     id 'com.chaquo.python'
 }
 
+final def chaquopyBuildPython = providers.gradleProperty('chaquopyBuildPython').orNull
+
 android {
     namespace 'com.beetv.chaquo'
 
@@ -16,6 +18,9 @@ android {
         minSdk 24
         targetSdk 36
         python {
+            if (chaquopyBuildPython) {
+                buildPython chaquopyBuildPython
+            }
             version "3.10"
             pip {
                 install("-r", "requirements.txt")

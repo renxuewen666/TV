@@ -68,7 +68,7 @@ public class Updater implements Download.Callback {
 
     private void doInBackground(Activity activity) {
         try {
-            JsonObject update = BeeApi.get().checkUpdate(BuildConfig.VERSION_CODE, BuildConfig.FLAVOR_mode);
+            JsonObject update = BeeApi.get().checkUpdate(BuildConfig.VERSION_CODE, BuildConfig.UI6_APP_ID);
             if (update != null) {
                 String dlUrl = update.has("downloadUrl") ? update.get("downloadUrl").getAsString() : "";
                 if (!dlUrl.isEmpty()) {

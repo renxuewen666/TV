@@ -2,10 +2,11 @@ package com.beetv.android.tv.player.exo;
 
 import androidx.media3.database.StandaloneDatabaseProvider;
 import androidx.media3.datasource.cache.Cache;
-import androidx.media3.datasource.cache.NoOpCacheEvictor;
+import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor;
 import androidx.media3.datasource.cache.SimpleCache;
 
 import com.beetv.android.tv.App;
+import com.beetv.android.tv.Setting;
 import com.github.catvod.utils.Path;
 
 public class CacheManager {
@@ -26,7 +27,8 @@ public class CacheManager {
     }
 
     private void create() {
-        cache = new SimpleCache(Path.exo(), new NoOpCacheEvictor(), new StandaloneDatabaseProvider(App.get()));
+        long maxBytes = Setting.getPlayerCacheMaxMb() * 1024L * 1024L;
+        cache = new SimpleCache(Path.exo(), new LeastRecentlyUsedCacheEvictor(maxBytes), new StandaloneDatabaseProvider(App.get()));
     }
 
     public void release() {

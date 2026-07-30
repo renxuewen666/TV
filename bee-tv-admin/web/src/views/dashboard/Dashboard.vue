@@ -82,7 +82,7 @@ const memberTrendOption = computed(() => {
   const data = stats.value.trends?.newMembers || []
   return {
     ...makeDateAxis(data),
-    series: [{ data: data.map(d => d.count), type: 'line', smooth: true, areaStyle: { opacity: 0.15 }, itemStyle: { color: '#409eff' }, lineStyle: { color: '#409eff' } }],
+    series: [{ data: data.map((d: any) => d.count), type: 'line', smooth: true, areaStyle: { opacity: 0.15 }, itemStyle: { color: '#409eff' }, lineStyle: { color: '#409eff' } }],
   }
 })
 
@@ -90,7 +90,7 @@ const signinTrendOption = computed(() => {
   const data = stats.value.trends?.signins || []
   return {
     ...makeDateAxis(data),
-    series: [{ data: data.map(d => d.count), type: 'bar', itemStyle: { color: '#67c23a', borderRadius: [4, 4, 0, 0] }, barWidth: '50%' }],
+    series: [{ data: data.map((d: any) => d.count), type: 'bar', itemStyle: { color: '#67c23a', borderRadius: [4, 4, 0, 0] }, barWidth: '50%' }],
   }
 })
 

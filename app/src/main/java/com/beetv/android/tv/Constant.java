@@ -4,7 +4,7 @@ import java.util.concurrent.TimeUnit;
 
 public class Constant {
 
-    public static final String ADMIN_API_URL = "http://mf.xuewen.plus:7443/api";
+    public static final String ADMIN_API_URL = "https://mf.xuewen.plus:7443/api";
     public static final String APP_VERSION_CHECK = ADMIN_API_URL + "/app-manage/version/check";
     public static final String APP_CONFIG_URL = ADMIN_API_URL + "/api-manage/app-config";
     public static final String HOME_LAYOUT_URL = ADMIN_API_URL + "/home-layout/active";

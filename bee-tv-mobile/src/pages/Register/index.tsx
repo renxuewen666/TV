@@ -6,8 +6,7 @@ import { authAPI } from '../../api/auth';
 export default function Register() {
   const navigate = useNavigate();
   const setAuth = useAuthStore(s => s.setAuth);
-  const [email, setEmail] = useState('');
-  const [nickname, setNickname] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -15,12 +14,8 @@ export default function Register() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim() || !nickname.trim() || !password || !confirmPassword) {
-      setError('请填写所有字段');
-      return;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError('邮箱格式不正确');
+    if (!username.trim() || !password || !confirmPassword) {
+      setError('请填写账号和密码');
       return;
     }
     if (password.length < 6) {
@@ -34,7 +29,7 @@ export default function Register() {
     setLoading(true);
     setError('');
     try {
-      const res = await authAPI.register({ email: email.trim(), nickname: nickname.trim(), password });
+      const res = await authAPI.register({ username: username.trim(), nickname: username.trim(), password });
       setAuth(res.data.token, res.data.user);
       navigate('/home', { replace: true });
     } catch (err: any) {
@@ -63,25 +58,17 @@ export default function Register() {
       }}>
         <div style={{ marginBottom: 32, textAlign: 'center' }}>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>创建账号</h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginTop: 8 }}>注册蜜蜂影视会员</p>
+          <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginTop: 8 }}>注册蜜蜂影视会员，邮箱可稍后在用户中心完善</p>
         </div>
 
         <form onSubmit={handleSubmit} className="form-group">
           <input
             className="input-field"
-            type="email"
-            placeholder="邮箱"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            autoComplete="email"
-          />
-          <input
-            className="input-field"
             type="text"
-            placeholder="昵称"
-            value={nickname}
-            onChange={e => setNickname(e.target.value)}
-            autoComplete="nickname"
+            placeholder="账号/昵称"
+            value={username}
+            onChange={e => setUsername(e.target.value)}
+            autoComplete="username"
           />
           <input
             className="input-field"

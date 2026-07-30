@@ -29,7 +29,7 @@
       <el-form :model="form" label-width="80px">
         <el-form-item label="标题"><el-input v-model="form.title" /></el-form-item>
         <el-form-item label="类型">
-          <el-select v-model="form.type" :model-value="1">
+          <el-select v-model="form.type">
             <el-option :value="1" label="文本" />
             <el-option :value="2" label="链接" />
             <el-option :value="3" label="弹窗" />
@@ -50,10 +50,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { noticeApi } from '@/api'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
+const route = useRoute()
+const fixedType = computed(() => route.meta.noticeType as number | undefined)
 const list = ref<any[]>([])
 const total = ref(0)
 const visible = ref(false)
@@ -61,16 +64,19 @@ const editing = ref<any>({})
 const form = ref({ title: '', content: '', type: 1, appIds: '', status: 1 })
 
 onMounted(() => loadData())
+watch(() => route.path, () => loadData())
 
 const loadData = async (page = 1) => {
-  const res: any = await noticeApi.list({ page, size: 20 })
+  const params: any = { page, size: 20 }
+  if (fixedType.value) params.type = fixedType.value
+  const res: any = await noticeApi.list(params)
   list.value = res.data?.list || []
   total.value = res.data?.total || 0
 }
 
 const openDialog = (row?: any) => {
   if (row) { editing.value = row; form.value = { ...row } }
-  else { editing.value = {}; form.value = { title: '', content: '', type: 1, appIds: '', status: 1 } }
+  else { editing.value = {}; form.value = { title: '', content: '', type: fixedType.value || 1, appIds: '', status: 1 } }
   visible.value = true
 }
 const handleSave = async () => {

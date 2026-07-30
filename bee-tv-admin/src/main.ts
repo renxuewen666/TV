@@ -5,6 +5,8 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+import { AdminLogInterceptor } from './common/interceptors/admin-log.interceptor';
+import { AdminLogService } from './modules/admin-log/admin-log.service';
 import { join } from 'path';
 import { existsSync } from 'fs';
 
@@ -15,7 +17,7 @@ async function bootstrap() {
   app.enableCors();
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
   app.useGlobalFilters(new HttpExceptionFilter());
-  app.useGlobalInterceptors(new TransformInterceptor());
+  app.useGlobalInterceptors(new AdminLogInterceptor(app.get(AdminLogService)), new TransformInterceptor());
 
   const config = new DocumentBuilder()
     .setTitle('蜜蜂影视管理后台 API')

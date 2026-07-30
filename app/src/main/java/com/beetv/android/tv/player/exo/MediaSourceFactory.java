@@ -23,6 +23,7 @@ import androidx.media3.extractor.ExtractorsFactory;
 import androidx.media3.extractor.ts.TsExtractor;
 
 import com.beetv.android.tv.App;
+import com.beetv.android.tv.Setting;
 import com.github.catvod.net.OkHttp;
 
 import java.util.HashMap;
@@ -90,12 +91,18 @@ public class MediaSourceFactory implements MediaSource.Factory {
     }
 
     private DataSource.Factory getDataSourceFactory() {
-        if (dataSourceFactory == null) dataSourceFactory = buildReadOnlyCacheDataSource(new DefaultDataSource.Factory(App.get(), getHttpDataSourceFactory()));
+        if (dataSourceFactory == null) {
+            DataSource.Factory upstreamFactory = new DefaultDataSource.Factory(App.get(), getHttpDataSourceFactory());
+            dataSourceFactory = Setting.isPlayerCacheEnabled() ? buildCacheDataSource(upstreamFactory) : upstreamFactory;
+        }
         return dataSourceFactory;
     }
 
-    private CacheDataSource.Factory buildReadOnlyCacheDataSource(DataSource.Factory upstreamFactory) {
-        return new CacheDataSource.Factory().setCache(CacheManager.get().getCache()).setUpstreamDataSourceFactory(upstreamFactory).setCacheWriteDataSinkFactory(null).setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR);
+    private CacheDataSource.Factory buildCacheDataSource(DataSource.Factory upstreamFactory) {
+        return new CacheDataSource.Factory()
+                .setCache(CacheManager.get().getCache())
+                .setUpstreamDataSourceFactory(upstreamFactory)
+                .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR);
     }
 
     private HttpDataSource.Factory getHttpDataSourceFactory() {

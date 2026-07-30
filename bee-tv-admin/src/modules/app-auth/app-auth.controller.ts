@@ -10,13 +10,19 @@ export class AppAuthController {
 
   @Public()
   @Post('register')
-  register(@Body() dto: { email: string; nickname: string; password: string }) {
+  register(@Body() dto: { email?: string; nickname?: string; username?: string; password: string; appId?: string; deviceId?: string }) {
     return this.appAuthService.register(dto);
   }
 
   @Public()
+  @Post('auto-register')
+  autoRegister(@Body() dto: { deviceId?: string; nickname?: string; appId?: string }) {
+    return this.appAuthService.autoRegister(dto);
+  }
+
+  @Public()
   @Post('login')
-  login(@Body() dto: { account: string; password: string }) {
+  login(@Body() dto: { account: string; password: string; appId?: string; deviceId?: string }) {
     return this.appAuthService.login(dto);
   }
 
