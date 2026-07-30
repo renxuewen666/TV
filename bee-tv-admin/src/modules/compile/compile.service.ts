@@ -196,6 +196,20 @@ export class CompileService {
     const task = await this.prisma.compileTask.findUnique({ where: { id } });
     if (!task) throw new NotFoundException('任务不存在');
 
+    const artifacts = task.artifacts ? JSON.parse(task.artifacts) : [];
+    const artifact = artifacts.find((item: any) => Number(item.id) === artifactId);
+    if (!artifact) throw new NotFoundException('构建工件不存在');
+
+    const cachePath = join(APK_CACHE_DIR, `${artifact.name}.apk`);
+    if (existsSync(cachePath)) {
+      const apk = readFileSync(cachePath);
+      res.setHeader('Content-Type', 'application/vnd.android.package-archive');
+      res.setHeader('Content-Disposition', `attachment; filename="${artifact.name}.apk"`);
+      res.setHeader('Content-Length', apk.length);
+      res.send(apk);
+      return;
+    }
+
     const githubRepo = this.normalizeGithubRepo(task.githubRepo);
     const [owner, repo] = githubRepo.split('/');
     const url = `https://api.github.com/repos/${owner}/${repo}/actions/artifacts/${artifactId}/zip`;
