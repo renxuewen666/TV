@@ -122,7 +122,7 @@ const downloadArtifact = async (taskId: number, artifact: any) => {
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
-  link.download = `${artifact.name}.zip`
+  link.download = `${artifact.name}.apk`
   link.click()
   URL.revokeObjectURL(url)
 }
