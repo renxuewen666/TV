@@ -158,7 +158,11 @@ public class LoginDialog implements DialogInterface.OnDismissListener {
 
     private void setLoading(boolean loading) {
         binding.positive.setEnabled(!loading);
-        binding.positive.setText(loading ? "..." : (isRegisterMode ? R.string.login_reg_btn : R.string.login_btn));
+        if (loading) {
+            binding.positive.setText("...");
+        } else {
+            binding.positive.setText(isRegisterMode ? R.string.login_reg_btn : R.string.login_btn);
+        }
     }
 
     @Override
