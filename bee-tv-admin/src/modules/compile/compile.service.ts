@@ -133,9 +133,9 @@ export class CompileService {
           await this.prisma.compileTask.update({ where: { id }, data: { artifacts: artifactsJson } });
         }
         if (task.status !== 'success') {
-          await this.prisma.compileTask.update({ where: { id }, data: { status: 'success', artifactUrl, log: '构建成功' } });
-          this.cacheAllArtifacts(owner, repo, task.githubToken, artifacts);
-          this.syncAppVersions(task, artifacts);
+          await this.cacheAllArtifacts(owner, repo, task.githubToken, artifacts);
+          await this.syncAppVersions(task, artifacts);
+          await this.prisma.compileTask.update({ where: { id }, data: { status: 'success', artifactUrl, log: '构建成功，APK 已同步到服务器' } });
         }
         return { status: 'success', artifactUrl, artifacts, htmlUrl };
       }
@@ -230,11 +230,13 @@ export class CompileService {
 
   private async cacheAllArtifacts(owner: string, repo: string, token: string, artifacts: any[]) {
     mkdirSync(APK_CACHE_DIR, { recursive: true });
-    for (const art of artifacts) {
-      try {
-        const cachePath = join(APK_CACHE_DIR, art.name + '.apk');
-        if (existsSync(cachePath)) continue;
+    const failures: string[] = [];
 
+    for (const art of artifacts) {
+      const cachePath = join(APK_CACHE_DIR, art.name + '.apk');
+      if (existsSync(cachePath)) continue;
+
+      try {
         const url = `https://api.github.com/repos/${owner}/${repo}/actions/artifacts/${art.id}/zip`;
         const ghRes = await fetch(url, {
           headers: {
@@ -244,14 +246,19 @@ export class CompileService {
           },
           redirect: 'follow',
         });
-        if (!ghRes.ok) continue;
+        if (!ghRes.ok) throw new Error(`HTTP ${ghRes.status}`);
 
         const zipBuffer = Buffer.from(await ghRes.arrayBuffer());
         const zip = new AdmZip(zipBuffer);
         const apkEntry = zip.getEntries().find(e => e.entryName.endsWith('.apk'));
-        if (apkEntry) writeFileSync(cachePath, apkEntry.getData());
-      } catch {}
+        if (!apkEntry) throw new Error('工件中没有 APK 文件');
+        writeFileSync(cachePath, apkEntry.getData());
+      } catch (error: any) {
+        failures.push(`${art.name}: ${error?.message || '下载失败'}`);
+      }
     }
+
+    if (failures.length) throw new BadRequestException(`APK 同步失败：${failures.join('; ')}`);
   }
 
   private async syncAppVersions(task: any, artifacts: any[]) {
