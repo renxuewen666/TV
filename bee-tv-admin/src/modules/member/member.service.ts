@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
-import { BatchMemberDto, CreateLevelDto, CreateMemberDto, CreateMemberRuleDto, UpdateLevelDto, UpdateMemberDto, UpdateMemberRuleDto } from './dto/member.dto';
+import { BatchMemberDto, CreateLevelDto, CreateMemberDto, CreateMemberRuleDto, UpdateLevelDto, UpdateMemberDto, UpdateMemberRuleDto, CreateMemberGroupDto, UpdateMemberGroupDto } from './dto/member.dto';
 import { MembershipGrantService } from './membership-grant.service';
 
 @Injectable()
@@ -214,6 +214,7 @@ export class MemberService {
           username,
           email,
           nickname: String(data.nickname || username).trim() || username,
+          phone: String(data.phone || '').trim(),
           password: passwordHash,
           score: Math.max(0, Number(data.score || 0)),
           balance: Math.max(0, Number(data.balance || 0)),
@@ -274,6 +275,7 @@ export class MemberService {
     }
     if (username !== undefined) updateData.username = username;
     if (email !== undefined && email) updateData.email = email;
+    if (data.phone !== undefined) updateData.phone = String(data.phone).trim();
     if (data.nickname !== undefined) updateData.nickname = String(data.nickname).trim() || (username || existing.username || existing.nickname);
     if (data.password !== undefined && data.password !== '') updateData.password = await bcrypt.hash(data.password, 10);
     if (data.score !== undefined) updateData.score = Math.max(0, Number(data.score));
@@ -288,7 +290,36 @@ export class MemberService {
           referenceId: data.remark || '后台调整会员套餐',
         });
       }
-      if (Object.keys(updateData).length) await tx.appUser.update({ where: { id }, data: updateData });
+      if (Object.keys(updateData).length) {
+        await tx.appUser.update({ where: { id }, data: updateData });
+        // Log balance change if admin updated balance
+        if (data.balance !== undefined && Number(data.balance) !== existing.balance) {
+          const diff = Number(data.balance) - existing.balance;
+          await tx.balanceLog.create({
+            data: {
+              userId: String(id),
+              type: diff > 0 ? 'recharge' : 'deduct',
+              amount: diff,
+              balance: Number(data.balance),
+              remark: data.remark || `后台调整余额：${existing.balance} → ${data.balance}`,
+              orderId: `ADJ${Date.now()}`,
+            },
+          });
+        }
+        // Log score change if admin updated score
+        if (data.score !== undefined && Number(data.score) !== existing.score) {
+          const diff = Number(data.score) - existing.score;
+          await tx.appScoreLog.create({
+            data: {
+              userId: id,
+              type: diff > 0 ? 'sign_in' : 'consume',
+              score: diff,
+              balance: Number(data.score),
+              remark: data.remark || `后台调整积分：${existing.score} → ${data.score}`,
+            },
+          });
+        }
+      }
       if (data.status === 0) await tx.clientSession.deleteMany({ where: { userId: id } });
       return tx.appUser.findUnique({ where: { id } });
     });
@@ -390,7 +421,14 @@ export class MemberService {
       this.prisma.balanceLog.findMany({ where, skip, take: size, orderBy: { createdAt: 'desc' } }),
       this.prisma.balanceLog.count({ where }),
     ]);
-    return { list, total, page, size };
+    // Enrich with usernames
+    const userIds = [...new Set(list.map(b => b.userId))];
+    const users = userIds.length ? await this.prisma.appUser.findMany({ where: { id: { in: userIds.map(Number) } }, select: { id: true, username: true, nickname: true } }) : [];
+    const userMap = new Map(users.map(u => [String(u.id), u]));
+    return {
+      list: list.map(b => ({ ...b, username: userMap.get(b.userId)?.username || userMap.get(b.userId)?.nickname || '' })),
+      total, page, size,
+    };
   }
 
   async getScoreLogs(page = 1, size = 20, userId?: string) {
@@ -400,7 +438,14 @@ export class MemberService {
       this.prisma.appScoreLog.findMany({ where: userId ? { userId: Number(userId) } : {}, skip, take: size, orderBy: { createdAt: 'desc' } }),
       this.prisma.appScoreLog.count({ where: userId ? { userId: Number(userId) } : {} }),
     ]);
-    return { list, total, page, size };
+    // Enrich with usernames
+    const userIds = [...new Set(list.map(b => String(b.userId)))];
+    const users = userIds.length ? await this.prisma.appUser.findMany({ where: { id: { in: userIds.map(Number) } }, select: { id: true, username: true, nickname: true } }) : [];
+    const userMap = new Map(users.map(u => [String(u.id), u]));
+    return {
+      list: list.map(b => ({ ...b, username: userMap.get(String(b.userId))?.username || userMap.get(String(b.userId))?.nickname || '' })),
+      total, page, size,
+    };
   }
 
   async recharge(userId: string, amount: number, method: string, remark?: string) {
@@ -425,6 +470,91 @@ export class MemberService {
       return updated;
     });
     return { success: true, userId, amount, newBalance: updatedUser.balance, method };
+  }
+
+  async createBalanceLog(data: { userId: string; type: string; amount: number; balance?: number; remark?: string; orderId?: string }) {
+    return this.prisma.balanceLog.create({ data });
+  }
+
+  async updateBalanceLog(id: number, data: any) {
+    return this.prisma.balanceLog.update({ where: { id }, data });
+  }
+
+  async deleteBalanceLog(id: number) {
+    await this.prisma.balanceLog.delete({ where: { id } });
+    return { success: true };
+  }
+
+  async batchDeleteBalanceLogs(ids: number[]) {
+    const result = await this.prisma.balanceLog.deleteMany({ where: { id: { in: ids } } });
+    return { success: true, count: result.count };
+  }
+
+  async createScoreLog(data: { userId: string; type: string; score: number; balance?: number; remark?: string }) {
+    return this.prisma.appScoreLog.create({ data: { ...data, userId: Number(data.userId) } });
+  }
+
+  async updateScoreLog(id: number, data: any) {
+    return this.prisma.appScoreLog.update({ where: { id }, data });
+  }
+
+  async deleteScoreLog(id: number) {
+    await this.prisma.appScoreLog.delete({ where: { id } });
+    return { success: true };
+  }
+
+  async batchDeleteScoreLogs(ids: number[]) {
+    const result = await this.prisma.appScoreLog.deleteMany({ where: { id: { in: ids } } });
+    return { success: true, count: result.count };
+  }
+
+  async getRechargeOrders(params: { page?: number; size?: number; keyword?: string; status?: number }) {
+    const page = Math.max(1, Number(params.page) || 1);
+    const size = Math.min(100, Math.max(1, Number(params.size) || 20));
+    const skip = (page - 1) * size;
+    const where: any = {};
+    if (params.status !== undefined) where.status = params.status;
+    const search = String(params.keyword || '').trim();
+    if (search) {
+      where.OR = [
+        { orderNo: { contains: search } },
+        { userId: { contains: search } },
+      ];
+    }
+    const [list, total] = await Promise.all([
+      this.prisma.rechargeOrder.findMany({ where, skip, take: size, orderBy: { createdAt: 'desc' } }),
+      this.prisma.rechargeOrder.count({ where }),
+    ]);
+    // Enrich with usernames
+    const userIds = [...new Set(list.map(r => r.userId))];
+    const users = userIds.length ? await this.prisma.appUser.findMany({ where: { id: { in: userIds.map(Number) } }, select: { id: true, username: true, nickname: true } }) : [];
+    const userMap = new Map(users.map(u => [String(u.id), u]));
+    return {
+      list: list.map(r => ({ ...r, username: userMap.get(r.userId)?.username || userMap.get(r.userId)?.nickname || '' })),
+      total, page, size,
+    };
+  }
+
+  async createRechargeOrder(data: any) {
+    const sanitized = { ...data };
+    sanitized.payTime = sanitized.payTime ? new Date(sanitized.payTime) : null;
+    return this.prisma.rechargeOrder.create({ data: sanitized });
+  }
+
+  async updateRechargeOrder(id: number, data: any) {
+    const sanitized = { ...data };
+    sanitized.payTime = sanitized.payTime ? new Date(sanitized.payTime) : null;
+    return this.prisma.rechargeOrder.update({ where: { id }, data: sanitized });
+  }
+
+  async deleteRechargeOrder(id: number) {
+    await this.prisma.rechargeOrder.delete({ where: { id } });
+    return { success: true };
+  }
+
+  async batchDeleteRechargeOrders(ids: number[]) {
+    const result = await this.prisma.rechargeOrder.deleteMany({ where: { id: { in: ids } } });
+    return { success: true, count: result.count };
   }
 
   async getExportableCodes(levelId?: number, status?: number) {
@@ -471,6 +601,125 @@ export class MemberService {
   async deleteRule(id: number) {
     await this.prisma.memberRule.delete({ where: { id } });
     return { success: true };
+  }
+
+  async getGroups(params?: { page?: number; size?: number }) {
+    const page = Math.max(1, Number(params?.page) || 1);
+    const size = Math.min(100, Math.max(1, Number(params?.size) || 100));
+    const skip = (page - 1) * size;
+    const [list, total] = await Promise.all([
+      this.prisma.memberGroup.findMany({
+        skip,
+        take: size,
+        orderBy: [{ sort: 'asc' }, { id: 'asc' }],
+      }),
+      this.prisma.memberGroup.count(),
+    ]);
+    return { list, total, page, size };
+  }
+
+  async createGroup(dto: CreateMemberGroupDto) {
+    if (dto.levelId && dto.levelId > 0) {
+      const level = await this.prisma.memberLevel.findFirst({ where: { id: dto.levelId, status: 1 } });
+      if (!level) throw new NotFoundException('会员套餐不存在或已停用');
+    }
+    return this.prisma.memberGroup.create({
+      data: {
+        name: dto.name,
+        levelId: dto.levelId,
+        price: Number(dto.price),
+        duration: Number(dto.duration),
+        isPermanent: Number(dto.isPermanent ?? 0) === 1,
+        description: dto.description || '',
+        discount: Number(dto.discount ?? 1),
+        dailyScore: Number(dto.dailyScore ?? 0),
+        status: Number(dto.status ?? 1),
+        sort: Number(dto.sort ?? 0),
+        deviceLimit: Number(dto.deviceLimit ?? 0),
+        loginOverflowAction: dto.loginOverflowAction || 'kick_oldest',
+        level: Number(dto.level ?? 0),
+      },
+    });
+  }
+
+  async updateGroup(id: number, dto: UpdateMemberGroupDto) {
+    const existing = await this.prisma.memberGroup.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException('会员套餐不存在');
+    if (dto.levelId !== undefined && dto.levelId > 0) {
+      const level = await this.prisma.memberLevel.findFirst({ where: { id: dto.levelId, status: 1 } });
+      if (!level) throw new NotFoundException('会员套餐不存在或已停用');
+    }
+    const updateData: any = {};
+    if (dto.name !== undefined) updateData.name = dto.name;
+    if (dto.levelId !== undefined) updateData.levelId = dto.levelId;
+    if (dto.price !== undefined) updateData.price = Number(dto.price);
+    if (dto.duration !== undefined) updateData.duration = Number(dto.duration);
+    if (dto.isPermanent !== undefined) updateData.isPermanent = Number(dto.isPermanent) === 1;
+    if (dto.description !== undefined) updateData.description = dto.description;
+    if (dto.discount !== undefined) updateData.discount = Number(dto.discount);
+    if (dto.dailyScore !== undefined) updateData.dailyScore = Number(dto.dailyScore);
+    if (dto.status !== undefined) updateData.status = Number(dto.status);
+    if (dto.sort !== undefined) updateData.sort = Number(dto.sort);
+    if (dto.deviceLimit !== undefined) updateData.deviceLimit = Number(dto.deviceLimit);
+    if (dto.loginOverflowAction !== undefined) updateData.loginOverflowAction = dto.loginOverflowAction;
+    if (dto.level !== undefined) updateData.level = Number(dto.level);
+    return this.prisma.memberGroup.update({ where: { id }, data: updateData });
+  }
+
+  async deleteGroup(id: number) {
+    await this.prisma.memberGroup.delete({ where: { id } });
+    return { success: true };
+  }
+
+  // ============ SignLog CRUD ============
+  async getSignLogs(page = 1, size = 20, keyword?: string) {
+    const skip = (page - 1) * size;
+    const where: any = {};
+    const search = String(keyword || '').trim();
+    if (search) where.OR = [{ userId: { contains: search } }];
+    const [list, total] = await Promise.all([
+      this.prisma.signLog.findMany({ where, skip, take: size, orderBy: { createdAt: 'desc' } }),
+      this.prisma.signLog.count({ where }),
+    ]);
+    // Enrich with usernames
+    const userIds = [...new Set(list.map(s => s.userId))];
+    const users = userIds.length ? await this.prisma.appUser.findMany({ where: { id: { in: userIds.map(Number) } }, select: { id: true, username: true, nickname: true } }) : [];
+    const userMap = new Map(users.map(u => [String(u.id), u]));
+    return {
+      list: list.map(s => ({ ...s, username: userMap.get(s.userId)?.username || userMap.get(s.userId)?.nickname || '' })),
+      total, page, size,
+    };
+  }
+
+  async createSignLog(data: { userId: string; signDate?: string; consecutiveDays?: number; reward?: number }) {
+    if (!data.userId) throw new BadRequestException('用户ID不能为空');
+    return this.prisma.signLog.create({
+      data: {
+        userId: data.userId,
+        signDate: data.signDate || new Date().toISOString().split('T')[0],
+        consecutiveDays: data.consecutiveDays || 1,
+        reward: data.reward || 0,
+      },
+    });
+  }
+
+  async updateSignLog(id: number, data: { signDate?: string; consecutiveDays?: number; reward?: number; userId?: string }) {
+    const updateData: any = {};
+    if (data.signDate !== undefined) updateData.signDate = data.signDate;
+    if (data.consecutiveDays !== undefined) updateData.consecutiveDays = data.consecutiveDays;
+    if (data.reward !== undefined) updateData.reward = data.reward;
+    if (data.userId !== undefined) updateData.userId = data.userId;
+    return this.prisma.signLog.update({ where: { id }, data: updateData });
+  }
+
+  async deleteSignLog(id: number) {
+    await this.prisma.signLog.delete({ where: { id } });
+    return { success: true };
+  }
+
+  async batchDeleteSignLogs(ids: number[]) {
+    const result = await this.prisma.signLog.deleteMany({ where: { id: { in: ids } } });
+    return { success: true, count: result.count };
   }
 
   private genCode(): string {

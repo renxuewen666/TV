@@ -1,5 +1,6 @@
 package com.beetv.android.tv.ui.dialog;
 
+import android.app.Activity;
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.view.LayoutInflater;
@@ -102,7 +103,7 @@ public class LoginDialog implements DialogInterface.OnDismissListener {
                 if (!token.isEmpty()) Setting.putAuthToken(token);
                 saveUserProfile(user, email, nickname, score);
                 BeeApi.get().syncVodConfig();
-                FragmentActivity activity = dialog.getOwnerActivity();
+                Activity activity = dialog.getOwnerActivity();
                 if (activity != null) {
                     activity.runOnUiThread(() -> {
                         setLoading(false);
@@ -111,7 +112,7 @@ public class LoginDialog implements DialogInterface.OnDismissListener {
                     });
                 }
             } catch (Exception e) {
-                FragmentActivity activity = dialog.getOwnerActivity();
+                Activity activity = dialog.getOwnerActivity();
                 if (activity != null) {
                     activity.runOnUiThread(() -> {
                         setLoading(false);
@@ -143,7 +144,7 @@ public class LoginDialog implements DialogInterface.OnDismissListener {
                 if (!token.isEmpty()) Setting.putAuthToken(token);
                 saveUserProfile(user, registerEmail, registerNickname, score);
                 BeeApi.get().syncVodConfig();
-                FragmentActivity activity = dialog.getOwnerActivity();
+                Activity activity = dialog.getOwnerActivity();
                 if (activity != null) {
                     activity.runOnUiThread(() -> {
                         setLoading(false);
@@ -152,7 +153,7 @@ public class LoginDialog implements DialogInterface.OnDismissListener {
                     });
                 }
             } catch (Exception e) {
-                FragmentActivity activity = dialog.getOwnerActivity();
+                Activity activity = dialog.getOwnerActivity();
                 if (activity != null) {
                     activity.runOnUiThread(() -> {
                         setLoading(false);

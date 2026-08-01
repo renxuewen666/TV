@@ -27,6 +27,9 @@ export class CreateAdvertisementDto {
 
   @IsOptional()
   endAt?: Date;
+
+  @IsOptional() @IsString()
+  params?: string;
 }
 
 export class UpdateAdvertisementDto {
@@ -56,4 +59,7 @@ export class UpdateAdvertisementDto {
 
   @IsOptional()
   endAt?: Date;
+
+  @IsOptional() @IsString()
+  params?: string;
 }

@@ -1,5 +1,6 @@
 package com.beetv.android.tv.ui.dialog;
 
+import android.app.Activity;
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.view.LayoutInflater;
@@ -7,7 +8,7 @@ import android.view.View;
 import android.view.WindowManager;
 
 import androidx.appcompat.app.AlertDialog;
-import androidx.fragment.app.FragmentActivity;
+import androidx.appcompat.app.AppCompatActivity;
 
 import com.beetv.android.tv.R;
 import com.beetv.android.tv.Setting;
@@ -26,11 +27,11 @@ public class UserCenterDialog {
         void onProfileUpdated();
     }
 
-    public static UserCenterDialog create(FragmentActivity activity) {
+    public static UserCenterDialog create(AppCompatActivity activity) {
         return new UserCenterDialog(activity);
     }
 
-    public UserCenterDialog(FragmentActivity activity) {
+    public UserCenterDialog(AppCompatActivity activity) {
         this.binding = DialogUserCenterBinding.inflate(LayoutInflater.from(activity));
         this.dialog = new MaterialAlertDialogBuilder(activity).setView(binding.getRoot()).create();
     }
@@ -56,7 +57,7 @@ public class UserCenterDialog {
                 JsonObject data = BeeApi.get().getProfile();
                 userProfile = data.has("data") ? data.getAsJsonObject("data") : data;
                 
-                FragmentActivity activity = dialog.getOwnerActivity();
+                Activity activity = dialog.getOwnerActivity();
                 if (activity != null) {
                     activity.runOnUiThread(() -> {
                         binding.usernameInput.setText(userProfile.has("username") ? userProfile.get("username").getAsString() : "");
@@ -137,7 +138,7 @@ public class UserCenterDialog {
                     throw new Exception(msg);
                 }
 
-                FragmentActivity activity = dialog.getOwnerActivity();
+                Activity activity = dialog.getOwnerActivity();
                 if (activity != null) {
                     activity.runOnUiThread(() -> {
                         dialog.dismiss();
@@ -150,7 +151,7 @@ public class UserCenterDialog {
                 }
             } catch (Exception e) {
                 e.printStackTrace();
-                FragmentActivity activity = dialog.getOwnerActivity();
+                Activity activity = dialog.getOwnerActivity();
                 if (activity != null) {
                     activity.runOnUiThread(() -> {
                         com.google.android.material.snackbar.Snackbar.make(

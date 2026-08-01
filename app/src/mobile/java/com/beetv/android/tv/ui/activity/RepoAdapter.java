@@ -11,17 +11,17 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.beetv.android.tv.R;
 import com.beetv.android.tv.Setting;
-import com.beetv.android.tv.bean.Config;
 import com.beetv.android.tv.databinding.ItemRepoBinding;
+import com.google.gson.JsonObject;
 
 import java.util.List;
 
 public class RepoAdapter extends RecyclerView.Adapter<RepoAdapter.ViewHolder> {
 
     private final Context context;
-    private final List<Config> repoList;
+    private final List<JsonObject> repoList;
 
-    public RepoAdapter(Context context, List<Config> repoList) {
+    public RepoAdapter(Context context, List<JsonObject> repoList) {
         this.context = context;
         this.repoList = repoList;
     }
@@ -36,12 +36,14 @@ public class RepoAdapter extends RecyclerView.Adapter<RepoAdapter.ViewHolder> {
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        Config config = repoList.get(position);
-        holder.binding.repoName.setText(config.getName());
-        holder.binding.repoUrl.setText(config.getUrl());
+        JsonObject repo = repoList.get(position);
+        String name = repo.has("name") ? repo.get("name").getAsString() : "仓库";
+        String url = repo.has("url") ? repo.get("url").getAsString() : "";
+        holder.binding.repoName.setText(name);
+        holder.binding.repoUrl.setText(url);
         holder.binding.useBtn.setOnClickListener(v -> {
-            Setting.setConfigUrl(config.getUrl());
-            Toast.makeText(context, "已切换到：" + config.getName(), Toast.LENGTH_SHORT).show();
+            Setting.putConfigUrl(url);
+            Toast.makeText(context, "已切换到：" + name, Toast.LENGTH_SHORT).show();
             if (context instanceof RepoListActivity) {
                 ((RepoListActivity) context).finish();
             }

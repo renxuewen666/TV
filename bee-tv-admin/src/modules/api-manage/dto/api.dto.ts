@@ -24,6 +24,12 @@ export class CreateApiDto {
 
   @IsOptional() @IsInt()
   status?: number;
+
+  @IsOptional() @IsString()
+  appIds?: string;
+
+  @IsOptional() @IsString()
+  ext?: string;
 }
 
 export class UpdateApiDto {
@@ -50,4 +56,10 @@ export class UpdateApiDto {
 
   @IsOptional() @IsInt()
   status?: number;
+
+  @IsOptional() @IsString()
+  appIds?: string;
+
+  @IsOptional() @IsString()
+  ext?: string;
 }

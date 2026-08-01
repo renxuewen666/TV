@@ -5,4 +5,8 @@
     <color name="accent">@color/blue_500</color>
     <color name="indicator">@color/white_80</color>
 
+    <!-- 用户中心和仓库列表颜色 -->
+    <color name="bg_dark">#1A1A1A</color>
+    <color name="card_bg">#2D2D2D</color>
+
 </resources>

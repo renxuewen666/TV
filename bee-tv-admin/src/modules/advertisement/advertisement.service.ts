@@ -28,13 +28,26 @@ export class AdvertisementService {
     );
   }
 
+  private toDateOrNull(val: any): Date | null {
+    if (!val) return null;
+    if (val instanceof Date) return val;
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
   async create(data: any) {
-    return this.prisma.advertisement.create({ data });
+    const sanitized = { ...data };
+    sanitized.startAt = this.toDateOrNull(sanitized.startAt);
+    sanitized.endAt = this.toDateOrNull(sanitized.endAt);
+    return this.prisma.advertisement.create({ data: sanitized });
   }
 
   async update(id: number, data: any) {
     await this.findOne(id);
-    return this.prisma.advertisement.update({ where: { id }, data });
+    const sanitized = { ...data };
+    sanitized.startAt = this.toDateOrNull(sanitized.startAt);
+    sanitized.endAt = this.toDateOrNull(sanitized.endAt);
+    return this.prisma.advertisement.update({ where: { id }, data: sanitized });
   }
 
   async remove(id: number) {

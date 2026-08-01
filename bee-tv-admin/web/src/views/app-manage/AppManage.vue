@@ -17,6 +17,7 @@
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="name" label="应用名称" min-width="140" />
         <el-table-column prop="appId" label="AppId" min-width="130" />
+        <el-table-column prop="appKey" label="AppKey" min-width="180" show-overflow-tooltip />
         <el-table-column prop="packageId" label="包名" min-width="170" />
         <el-table-column prop="platform" label="平台" width="90"><template #default="{ row }"><el-tag>{{ platformLabel(row.platform) }}</el-tag></template></el-table-column>
         <el-table-column prop="loginLimit" label="设备数" width="80" />
@@ -47,14 +48,59 @@
         <el-form-item label="QQ群"><el-input v-model="appForm.qqGroup" placeholder="客服或用户QQ群（可选）" /></el-form-item>
         <el-form-item label="Android包名"><el-input v-model="appForm.packageId" placeholder="com.mifeng.video.tv" /></el-form-item>
         <el-form-item label="客户端平台"><el-radio-group v-model="appForm.platform"><el-radio value="tv">TV端</el-radio><el-radio value="mobile">手机端</el-radio><el-radio value="h5">H5</el-radio></el-radio-group></el-form-item>
-        <el-form-item label="最大设备数"><el-input-number v-model="appForm.loginLimit" :min="1" :max="20" /></el-form-item>
-        <el-form-item label="运营模式"><el-select v-model="appForm.operationMode"><el-option label="全免费" value="all_free" /><el-option label="仅点播会员" value="vod_paid" /><el-option label="仅直播会员" value="live_paid" /><el-option label="全部会员" value="all_paid" /></el-select></el-form-item>
+        <el-form-item label="运营模式"><el-select v-model="appForm.operationMode"><el-option label="全免费" value="all_free" /><el-option label="全收费" value="all_paid" /><el-option label="仅直播" value="live_only" /><el-option label="仅点播" value="vod_only" /></el-select></el-form-item>
         <el-form-item label="状态"><el-switch v-model="appForm.status" :active-value="1" :inactive-value="0" /></el-form-item>
-        <el-form-item label="Logo"><el-input v-model="appForm.logo" placeholder="图片URL（可选）" /></el-form-item>
-        <el-form-item label="启动图"><el-input v-model="appForm.splash" placeholder="图片URL（可选）" /></el-form-item>
-        <el-form-item label="背景图"><el-input v-model="appForm.backdrop" placeholder="个人中心或启动背景图片URL" /></el-form-item>
-        <el-form-item label="播放页图"><el-input v-model="appForm.playerImage" placeholder="播放器扩展图片URL（可选）" /></el-form-item>
-        <el-form-item label="客服图"><el-input v-model="appForm.serviceImage" placeholder="客服二维码或联系图片URL（可选）" /></el-form-item>
+        <el-form-item label="Logo">
+          <div class="img-upload-block">
+            <el-upload :show-file-list="false" :before-upload="(file: File) => handleImageUpload(file, 'logo')" action="#"><el-button size="small">上传图片</el-button></el-upload>
+            <el-input v-model="appForm.logo" placeholder="图片URL（可选）" />
+            <el-image v-if="appForm.logo" :src="appForm.logo" class="img-thumb" fit="contain" />
+          </div>
+        </el-form-item>
+        <el-form-item label="启动图">
+          <div class="img-upload-block">
+            <el-upload :show-file-list="false" :before-upload="(file: File) => handleImageUpload(file, 'splash')" action="#"><el-button size="small">上传图片</el-button></el-upload>
+            <el-input v-model="appForm.splash" placeholder="图片URL（可选）" />
+            <el-image v-if="appForm.splash" :src="appForm.splash" class="img-thumb" fit="contain" />
+          </div>
+        </el-form-item>
+        <el-form-item label="背景图">
+          <div class="img-upload-block">
+            <el-upload :show-file-list="false" :before-upload="(file: File) => handleImageUpload(file, 'backdrop')" action="#"><el-button size="small">上传图片</el-button></el-upload>
+            <el-input v-model="appForm.backdrop" placeholder="个人中心或启动背景图片URL" />
+            <el-image v-if="appForm.backdrop" :src="appForm.backdrop" class="img-thumb" fit="contain" />
+          </div>
+        </el-form-item>
+        <el-form-item label="播放页图">
+          <div class="img-upload-block">
+            <el-upload :show-file-list="false" :before-upload="(file: File) => handleImageUpload(file, 'playerImage')" action="#"><el-button size="small">上传图片</el-button></el-upload>
+            <el-input v-model="appForm.playerImage" placeholder="播放器扩展图片URL（可选）" />
+            <el-image v-if="appForm.playerImage" :src="appForm.playerImage" class="img-thumb" fit="contain" />
+            <el-input v-model="appForm.playerImageLink" placeholder="播放页图片链接（可选）" />
+          </div>
+        </el-form-item>
+        <el-form-item label="播放器背景图">
+          <div class="img-upload-block">
+            <el-upload :show-file-list="false" :before-upload="(file: File) => handleImageUpload(file, 'playerBgImage')" action="#"><el-button size="small">上传图片</el-button></el-upload>
+            <el-input v-model="appForm.playerBgImage" placeholder="播放器背景图URL（可选）" />
+            <el-image v-if="appForm.playerBgImage" :src="appForm.playerBgImage" class="img-thumb" fit="contain" />
+          </div>
+        </el-form-item>
+        <el-form-item label="客服图">
+          <div class="img-upload-block">
+            <el-upload :show-file-list="false" :before-upload="(file: File) => handleImageUpload(file, 'serviceImage')" action="#"><el-button size="small">上传图片</el-button></el-upload>
+            <el-input v-model="appForm.serviceImage" placeholder="客服二维码或联系图片URL（可选）" />
+            <el-image v-if="appForm.serviceImage" :src="appForm.serviceImage" class="img-thumb" fit="contain" />
+          </div>
+        </el-form-item>
+        <el-form-item label="个人中心图">
+          <div class="img-upload-block">
+            <el-upload :show-file-list="false" :before-upload="(file: File) => handleImageUpload(file, 'profileImage')" action="#"><el-button size="small">上传图片</el-button></el-upload>
+            <el-input v-model="appForm.profileImage" placeholder="个人中心图片URL（可选）" />
+            <el-image v-if="appForm.profileImage" :src="appForm.profileImage" class="img-thumb" fit="contain" />
+            <el-input v-model="appForm.profileImageLink" placeholder="个人中心图片链接（可选）" />
+          </div>
+        </el-form-item>
         <el-divider content-position="left">注册策略（继承表示使用全局会员配置）</el-divider>
         <el-form-item label="用户注册"><el-radio-group v-model="appForm.registerPolicy"><el-radio :value="-1">继承</el-radio><el-radio :value="1">开启</el-radio><el-radio :value="0">关闭</el-radio></el-radio-group></el-form-item>
         <el-form-item label="自动注册"><el-radio-group v-model="appForm.autoRegisterPolicy"><el-radio :value="-1">继承</el-radio><el-radio :value="1">开启</el-radio><el-radio :value="0">关闭</el-radio></el-radio-group></el-form-item>
@@ -82,7 +128,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { appManageApi, clientAppApi } from '@/api'
+import { appManageApi, clientAppApi, uploadApi } from '@/api'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const route = useRoute()
@@ -104,10 +150,18 @@ async function loadData() {
 }
 
 const platformLabel = (platform: string) => ({ tv: 'TV端', mobile: '手机端', h5: 'H5' }[platform] || platform)
-const operationLabel = (mode: string) => ({ all_free: '全免费', vod_paid: '点播会员', live_paid: '直播会员', all_paid: '全部会员' }[mode] || mode)
+const operationLabel = (mode: string) => ({ all_free: '全免费', all_paid: '全收费', live_only: '仅直播', vod_only: '仅点播' }[mode] || mode)
+
+const handleImageUpload = async (file: File, field: string) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  const res: any = await uploadApi.image(formData)
+  appForm.value[field] = res.data.url
+  return false
+}
 
 const openAppDialog = (row?: any) => {
-  appForm.value = row ? { ...row, runtimeConfig: row.runtimeConfig || '', registerPolicy: row.registerPolicy ?? -1, autoRegisterPolicy: row.autoRegisterPolicy ?? -1, emailPolicy: row.emailPolicy ?? -1 } : { name: '', appId: '', appKey: '', qqGroup: '', packageId: '', platform: 'tv', loginLimit: 3, operationMode: 'all_free', status: 1, logo: '', splash: '', backdrop: '', playerImage: '', serviceImage: '', about: '', runtimeConfig: '', registerPolicy: -1, autoRegisterPolicy: -1, emailPolicy: -1 }
+  appForm.value = row ? { ...row, runtimeConfig: row.runtimeConfig || '', registerPolicy: row.registerPolicy ?? -1, autoRegisterPolicy: row.autoRegisterPolicy ?? -1, emailPolicy: row.emailPolicy ?? -1 } : { name: '', appId: '', appKey: '', qqGroup: '', packageId: '', platform: 'tv', operationMode: 'all_free', status: 1, logo: '', splash: '', backdrop: '', playerImage: '', playerImageLink: '', playerBgImage: '', serviceImage: '', profileImage: '', profileImageLink: '', about: '', runtimeConfig: '', registerPolicy: -1, autoRegisterPolicy: -1, emailPolicy: -1 }
   appVisible.value = true
 }
 const saveApp = async () => {
@@ -136,4 +190,6 @@ const removeVersion = async (id: number) => { await ElMessageBox.confirm('确定
 .page-header h3 { margin: 0; font-size: 18px; }
 .page-header p { margin: 6px 0 0; color: #909399; font-size: 13px; }
 .toolbar { display: flex; justify-content: space-between; align-items: center; }
+.img-upload-block { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.img-thumb { width: 120px; height: 120px; border: 1px solid #e4e7ed; border-radius: 4px; background: #f5f7fa; }
 </style>

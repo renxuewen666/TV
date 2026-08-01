@@ -40,6 +40,15 @@
         <template v-else-if="isPassword(item.key)">
           <el-input v-model="item.value" type="password" show-password class="config-input" />
         </template>
+        <template v-else-if="isImageUpload(item.key)">
+          <div style="display:flex;gap:8px;align-items:flex-start;width:100%">
+            <el-input v-model="item.value" placeholder="图片URL或上传" class="config-input" />
+            <el-upload :show-file-list="false" :before-upload="(file: any) => handleLogoUpload(file, item)" accept="image/*">
+              <el-button type="primary" size="small">上传</el-button>
+            </el-upload>
+          </div>
+          <el-image v-if="item.value" :src="item.value" style="width:120px;height:40px;margin-top:8px" fit="contain" />
+        </template>
         <template v-else>
           <el-input v-model="item.value" class="config-input" />
         </template>
@@ -72,7 +81,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { systemApi } from '@/api'
+import { systemApi, uploadApi } from '@/api'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 interface ConfigItem { key: string; value: string; group: string; remark: string }
@@ -96,7 +105,6 @@ const currentItems = computed(() => allItems.value.filter(i => (i.group || 'basi
 
 const selectOptions: Record<string, Array<{ label: string; value: string }>> = {
   smtp_secure: [{ label: 'SSL/TLS', value: 'true' }, { label: '普通/STARTTLS', value: 'false' }],
-  device_limit_mode: [{ label: '下线最早的设备', value: 'kick_oldest' }, { label: '拒绝登录', value: 'reject_new' }],
   default_player: [{ label: '系统播放器', value: 'system' }, { label: 'LJK播放器', value: 'ljk' }, { label: 'EXO播放器', value: 'exo' }],
   custom_repo_mode: [{ label: '关闭', value: 'off' }, { label: '开启', value: 'on' }, { label: '自动', value: 'auto' }],
 }
@@ -104,6 +112,7 @@ const selectOptions: Record<string, Array<{ label: string; value: string }>> = {
 const isSelect = (key: string) => Boolean(selectOptions[key])
 const isSwitch = (key: string) => ['weather_show', 'player_cache_enabled', 'app_register_enabled', 'app_auto_register_enabled', 'app_register_email_required'].includes(key)
 const isPassword = (key: string) => ['smtp_pass', 'epay_key'].includes(key)
+const isImageUpload = (key: string) => ['site_logo'].includes(key)
 const isTextarea = (key: string) => ['source_rename_config'].includes(key)
 
 const loadData = async () => {
@@ -189,6 +198,16 @@ const handleImport = async (file: File) => {
   } catch (e: any) {
     if (e !== 'cancel') ElMessage.error('导入失败: ' + (e?.message || '数据格式错误'))
   }
+  return false
+}
+
+const handleLogoUpload = async (file: File, item: ConfigItem) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  const res: any = await uploadApi.image(formData)
+  item.value = res.data.url
+  await systemApi.update(item.key, { value: item.value, remark: item.remark, group: item.group })
+  ElMessage.success('Logo上传成功')
   return false
 }
 </script>

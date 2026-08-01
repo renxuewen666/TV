@@ -26,6 +26,8 @@ import { DanmakuModule } from './modules/danmaku/danmaku.module';
 import { AppConfigModule } from './modules/app-config/app-config.module';
 import { AdminLogModule } from './modules/admin-log/admin-log.module';
 import { FongMiModule } from './modules/fongmi/fongmi.module';
+import { UploadModule } from './modules/upload/upload.module';
+import { AttachmentModule } from './modules/attachment/attachment.module';
 import { PrismaModule } from './common/prisma.module';
 
 @Module({
@@ -58,6 +60,8 @@ import { PrismaModule } from './common/prisma.module';
     AppConfigModule,
     AdminLogModule,
     FongMiModule,
+    UploadModule,
+    AttachmentModule,
   ],
 })
 export class AppModule {}

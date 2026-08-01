@@ -66,14 +66,11 @@ model Member {
   expireAt   DateTime?
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
-  signLogs   SignLog[]
-  scoreLogs  ScoreLog[]
 }
 
 model SignLog {
   id             Int      @id @default(autoincrement())
   userId         String
-  member         Member   @relation(fields: [userId], references: [userId])
   signDate       String
   consecutiveDays Int     @default(1)
   reward         Int      @default(0)
@@ -83,7 +80,6 @@ model SignLog {
 model ScoreLog {
   id        Int      @id @default(autoincrement())
   userId    String
-  member    Member   @relation(fields: [userId], references: [userId])
   type      String   @default("sign_in")
   score     Int
   balance   Int      @default(0)
@@ -215,6 +211,8 @@ model ApiEndpoint {
   priority       Int      @default(0)
   isDefault      Boolean  @default(false)
   status         Int      @default(1)
+  appIds         String   @default("")
+  ext            String   @default("")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -230,6 +228,9 @@ model RepoSource {
   minMemberLevel Int      @default(0)
   isDefault      Boolean  @default(false)
   status         Int      @default(1)
+  appIds         String   @default("")
+  encrypted      Boolean  @default(false)
+  weight         Int      @default(0)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -255,6 +256,7 @@ model AppVersion {
   versionName String
   versionCode Int
   channel     String   @default("default")
+  appId       String   @default("")
   downloadUrl String
   changelog   String   @default("")
   packageSize String   @default("")
@@ -287,6 +289,10 @@ model ClientApp {
   splash        String   @default("")
   backdrop      String   @default("")
   playerImage   String   @default("")
+  playerImageLink    String   @default("")
+  playerBgImage      String   @default("")
+  profileImage       String   @default("")
+  profileImageLink   String   @default("")
   serviceImage       String   @default("")
   about              String   @default("")
   runtimeConfig      String   @default("")
@@ -304,6 +310,7 @@ model AppUser {
   email     String   @unique
   password  String
   nickname  String
+  phone     String   @default("")
   avatar    String   @default("")
   role      String   @default("user")
   status    Int      @default(1)
@@ -440,6 +447,7 @@ model Advertisement {
   title     String
   image     String
   link      String    @default("")
+  params    String    @default("")
   position  String    @default("mobile_home")
   appIds    String    @default("")
   sort      Int       @default(0)
@@ -483,19 +491,22 @@ model DanmakuConfig {
 // ==================== Phase 3: 会员管理增强 ====================
 
 model MemberGroup {
-  id          Int      @id @default(autoincrement())
-  name        String
-  levelId     Int      @default(0)
-  price       Float    @default(0)
-  duration    Int      @default(30)
-  isPermanent Boolean  @default(false)
-  description String   @default("")
-  discount    Float    @default(1.0)
-  dailyScore  Int      @default(0)
-  status      Int      @default(1)
-  sort        Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                  Int      @id @default(autoincrement())
+  name                String
+  levelId             Int      @default(0)
+  price               Float    @default(0)
+  duration            Int      @default(30)
+  isPermanent         Boolean  @default(false)
+  description         String   @default("")
+  discount            Float    @default(1.0)
+  dailyScore          Int      @default(0)
+  deviceLimit         Int      @default(0)
+  loginOverflowAction String   @default("auto_kick")
+  level               Int      @default(0)
+  status              Int      @default(1)
+  sort                Int      @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 }
 
 model MemberRule {
@@ -546,4 +557,49 @@ model AppConfig {
   updatedAt DateTime @updatedAt
 
   @@unique([appId])
+}
+
+// ==================== Phase 8: 附件管理 ====================
+
+model Attachment {
+  id        Int      @id @default(autoincrement())
+  name      String
+  url       String
+  size      Int      @default(0)
+  type      String   @default("image")
+  module    String   @default("")
+  uploader  String   @default("")
+  status    Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ==================== Phase 9: 充值管理 ====================
+
+model RechargeOrder {
+  id            Int      @id @default(autoincrement())
+  userId        String   @default("")
+  orderId       String   @default("")
+  orderAmount   Float    @default(0)
+  allocateAmount Float   @default(0)
+  payAmount     Float    @default(0)
+  payType       String   @default("")
+  payTime       DateTime?
+  ip            String   @default("")
+  remark        String   @default("")
+  status        Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// ==================== Phase 10: 设备数量管理 ====================
+
+model DeviceLimit {
+  id        Int      @id @default(autoincrement())
+  name      String
+  count     Int      @default(1)
+  remark    String   @default("")
+  status    Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

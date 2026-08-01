@@ -49,6 +49,9 @@ const router = createRouter({
         { path: 'signin', name: 'Signin', component: () => import('@/views/signin/Signin.vue'), meta: { title: '签到积分' } },
         { path: 'score-products', name: 'ScoreProducts', component: () => import('@/views/score/ScoreProducts.vue'), meta: { title: '积分商品' } },
         { path: 'score-exchanges', name: 'ScoreExchanges', component: () => import('@/views/score/ScoreExchanges.vue'), meta: { title: '兑换记录' } },
+
+        { path: 'attachment', name: 'Attachment', component: () => import('@/views/attachment/Attachment.vue'), meta: { title: '附件管理' } },
+        { path: 'member/signin', redirect: '/member/sign-logs' },
       ],
     },
   ],

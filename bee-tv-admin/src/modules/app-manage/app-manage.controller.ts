@@ -4,7 +4,7 @@ import { Response } from 'express';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { Public } from '../../common/decorators/public.decorator';
 import { AppManageService } from './app-manage.service';
-import { CreateVersionDto, CreateChannelDto } from './dto/app.dto';
+import { CreateVersionDto, UpdateVersionDto, CreateChannelDto } from './dto/app.dto';
 
 @ApiTags('应用管理')
 @Controller('app-manage')
@@ -24,7 +24,7 @@ export class AppManageController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Put('versions/:id')
-  updateVersion(@Param('id') id: string, @Body() body: { status?: number }) { return this.appManageService.updateVersion(+id, body); }
+  updateVersion(@Param('id') id: string, @Body() body: UpdateVersionDto) { return this.appManageService.updateVersion(+id, body); }
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)

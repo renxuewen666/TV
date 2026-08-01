@@ -10,6 +10,9 @@ import { AdminLogService } from './modules/admin-log/admin-log.service';
 import { join } from 'path';
 import { existsSync } from 'fs';
 
+// Fix BigInt JSON serialization (Prisma may return BigInt for some SQLite fields)
+(BigInt.prototype as any).toJSON = function () { return Number(this); };
+
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
@@ -30,6 +33,8 @@ async function bootstrap() {
 
   const expressApp = app.getHttpAdapter().getInstance();
   const express = require('express');
+
+  expressApp.use('/uploads', express.static(join(process.cwd(), 'uploads')));
 
   const mobileDist = join(__dirname, '..', '..', '..', 'bee-tv-mobile', 'dist');
   if (existsSync(mobileDist)) {
@@ -55,7 +60,7 @@ async function bootstrap() {
   if (existsSync(webDist)) {
     expressApp.use(express.static(webDist));
     expressApp.get('*', (req, res, next) => {
-      if (req.path.startsWith('/api') || req.path.startsWith('/m') || req.path.startsWith('/public')) return next();
+      if (req.path.startsWith('/api') || req.path.startsWith('/m') || req.path.startsWith('/public') || req.path.startsWith('/uploads')) return next();
       res.sendFile(join(webDist, 'index.html'));
     });
   }

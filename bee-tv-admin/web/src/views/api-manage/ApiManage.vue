@@ -10,6 +10,8 @@
         <template #default="{row}">{{ apiTypeLabel(row.type) }}</template>
       </el-table-column>
       <el-table-column prop="url" label="地址" show-overflow-tooltip />
+      <el-table-column prop="appIds" label="绑定应用" show-overflow-tooltip />
+      <el-table-column prop="ext" label="扩展参数" show-overflow-tooltip />
       <el-table-column prop="priority" label="优先级" width="90" />
       <el-table-column prop="minMemberLevel" label="最低等级" width="100"><template #default="{row}">{{ row.minMemberLevel || 0 }}</template></el-table-column>
       <el-table-column label="默认" width="80"><template #default="{row}"><el-tag :type="row.isDefault ? 'success' : 'info'">{{ row.isDefault ? '是' : '否' }}</el-tag></template></el-table-column>
@@ -27,13 +29,19 @@
     <el-dialog v-model="visible" title="接口" width="500px">
       <el-form :model="form" label-width="80px">
         <el-form-item label="名称"><el-input v-model="form.name" /></el-form-item>
-        <el-form-item label="类型"><el-select v-model="form.type"><el-option label="点播" :value="0" /><el-option label="直播" :value="1" /><el-option label="壁纸" :value="2" /><el-option label="播放解析" :value="3" /></el-select></el-form-item>
+        <el-form-item label="类型"><el-select v-model="form.type"><el-option label="json" :value="0" /><el-option label="json扩展" :value="1" /><el-option label="聚合" :value="2" /></el-select></el-form-item>
         <el-form-item label="地址"><el-input v-model="form.url" placeholder="解析线路可使用 {url} 作为影片地址占位符" /></el-form-item>
+        <el-form-item label="绑定应用">
+          <el-input v-model="form.appIds" placeholder="多个应用ID用逗号分隔，留空表示全部" />
+        </el-form-item>
         <el-form-item label="优先级"><el-input-number v-model="form.priority" :min="0" /></el-form-item>
         <el-form-item label="最低等级"><el-input-number v-model="form.minMemberLevel" :min="0" /><span class="hint">0 表示游客可用。</span></el-form-item>
         <el-form-item label="默认线路"><el-switch v-model="form.isDefault" /><span class="hint">点播、直播、壁纸和解析线路各自按默认、优先级排序。</span></el-form-item>
         <el-form-item label="状态"><el-switch v-model="form.status" :active-value="1" :inactive-value="0" /></el-form-item>
         <el-form-item label="备注"><el-input v-model="form.remark" /></el-form-item>
+        <el-form-item label="扩展参数">
+          <el-input v-model="form.ext" type="textarea" :rows="2" placeholder="接口扩展参数，有些接口需要带参数" />
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="visible = false">取消</el-button>
@@ -75,7 +83,7 @@ const testing = ref(false)
 const form = ref<any>({})
 const testData = ref<any>(null)
 const currentTestId = ref(0)
-const apiTypeLabel = (type: number) => ({ 0: '点播', 1: '直播', 2: '壁纸', 3: '播放解析' } as Record<number, string>)[Number(type)] || '未知'
+const apiTypeLabel = (type: number) => ({ 0: 'json', 1: 'json扩展', 2: '聚合' } as Record<number, string>)[Number(type)] || '未知'
 
 const formatResult = (data: any) => {
   if (typeof data === 'string') {
@@ -90,7 +98,7 @@ onMounted(async () => {
 })
 
 const openDialog = (row?: any) => {
-  form.value = row ? { ...row } : { name: '', type: 0, url: '', remark: '', priority: 0, minMemberLevel: 0, isDefault: false, status: 1 }
+  form.value = row ? { ...row } : { name: '', type: 0, url: '', appIds: '', remark: '', ext: '', priority: 0, minMemberLevel: 0, isDefault: false, status: 1 }
   visible.value = true
 }
 

@@ -66,28 +66,40 @@
     </el-card>
 
     <el-card v-if="tab === 'balance-logs'">
-      <template #header><div class="toolbar"><span>会员余额日志</span><el-button @click="loadBalanceLogs">刷新</el-button></div></template>
-      <el-table :data="balanceLogs" border>
-        <el-table-column prop="userId" label="用户ID" />
-        <el-table-column prop="type" label="类型" />
-        <el-table-column prop="amount" label="变动金额" />
-        <el-table-column prop="balance" label="变动后余额" />
+      <template #header><div class="toolbar"><span>会员余额日志</span><div><el-button type="primary" @click="openBalanceLog()">添加</el-button><el-button type="danger" :disabled="!selectedBalanceLogs.length" @click="batchDeleteBalanceLogs">批量删除</el-button><el-button @click="loadBalanceLogs">刷新</el-button></div></div></template>
+      <el-table :data="balanceLogs" border @selection-change="handleBalanceLogSelectionChange">
+        <el-table-column type="selection" width="50" />
+        <el-table-column prop="userId" label="用户ID" width="90" />
+        <el-table-column prop="username" label="用户名" min-width="120" />
+        <el-table-column prop="type" label="类型" width="90" />
+        <el-table-column prop="amount" label="变动金额" width="100" />
+        <el-table-column prop="balance" label="变动后余额" width="110" />
         <el-table-column prop="orderId" label="订单号" />
         <el-table-column prop="remark" label="备注" show-overflow-tooltip />
         <el-table-column prop="createdAt" label="时间" width="180" />
+        <el-table-column label="操作" width="160" fixed="right">
+          <template #default="{row}"><el-button size="small" @click="openBalanceLog(row)">编辑</el-button><el-button size="small" type="danger" @click="deleteBalanceLog(row.id)">删除</el-button></template>
+        </el-table-column>
       </el-table>
+      <el-pagination style="margin-top:12px" background layout="prev,pager,next,total" :total="balanceLogTotal" :page-size="20" @current-change="loadBalanceLogs" />
     </el-card>
 
     <el-card v-if="tab === 'score-logs'">
-      <template #header><div class="toolbar"><span>会员积分日志</span><el-button @click="loadScoreLogs">刷新</el-button></div></template>
-      <el-table :data="scoreLogs" border>
-        <el-table-column prop="userId" label="用户ID" />
-        <el-table-column prop="type" label="类型" />
-        <el-table-column prop="score" label="积分变动" />
-        <el-table-column prop="balance" label="变动后积分" />
+      <template #header><div class="toolbar"><span>会员积分日志</span><div><el-button type="primary" @click="openScoreLog()">添加</el-button><el-button type="danger" :disabled="!selectedScoreLogs.length" @click="batchDeleteScoreLogs">批量删除</el-button><el-button @click="loadScoreLogs">刷新</el-button></div></div></template>
+      <el-table :data="scoreLogs" border @selection-change="handleScoreLogSelectionChange">
+        <el-table-column type="selection" width="50" />
+        <el-table-column prop="userId" label="用户ID" width="90" />
+        <el-table-column prop="username" label="用户名" min-width="120" />
+        <el-table-column prop="type" label="类型" width="90" />
+        <el-table-column prop="score" label="积分变动" width="100" />
+        <el-table-column prop="balance" label="变动后积分" width="110" />
         <el-table-column prop="remark" label="备注" show-overflow-tooltip />
         <el-table-column prop="createdAt" label="时间" width="180" />
+        <el-table-column label="操作" width="160" fixed="right">
+          <template #default="{row}"><el-button size="small" @click="openScoreLog(row)">编辑</el-button><el-button size="small" type="danger" @click="deleteScoreLog(row.id)">删除</el-button></template>
+        </el-table-column>
       </el-table>
+      <el-pagination style="margin-top:12px" background layout="prev,pager,next,total" :total="scoreLogTotal" :page-size="20" @current-change="loadScoreLogs" />
     </el-card>
 
     <el-card v-if="tab === 'codes'">
@@ -105,22 +117,65 @@
     </el-card>
 
     <el-card v-if="tab === 'recharge'">
-      <template #header>充值管理</template>
-      <el-alert type="info" :closable="false" show-icon style="margin-bottom:12px">可对已有会员进行后台手动充值，同时写入会员余额日志。</el-alert>
-      <el-form label-width="100px" style="max-width:520px">
-        <el-form-item label="用户ID"><el-input v-model="rechargeForm.userId" placeholder="输入会员 userId" /></el-form-item>
-        <el-form-item label="充值金额"><el-input-number v-model="rechargeForm.amount" :min="0" :step="1" /></el-form-item>
-        <el-form-item label="充值方式"><el-select v-model="rechargeForm.method"><el-option label="后台手动" value="admin" /><el-option label="易支付" value="epay" /></el-select></el-form-item>
-        <el-form-item label="备注"><el-input v-model="rechargeForm.remark" type="textarea" /></el-form-item>
-        <el-form-item><el-button type="primary" @click="submitRecharge">确认充值</el-button></el-form-item>
-      </el-form>
+      <template #header><div class="toolbar"><span>充值管理</span><div><el-button type="primary" @click="openRechargeDialog()">添加</el-button><el-button type="danger" :disabled="!selectedRechargeIds.length" @click="batchDeleteRechargeOrders">批量删除</el-button><el-button @click="loadRechargeOrders">刷新</el-button></div></div></template>
+      <el-table :data="rechargeOrders" border @selection-change="handleRechargeSelectionChange">
+        <el-table-column type="selection" width="50" />
+        <el-table-column prop="id" label="ID" width="80" />
+        <el-table-column prop="userId" label="用户ID" width="90" />
+        <el-table-column prop="username" label="用户名" min-width="120" />
+        <el-table-column prop="orderId" label="订单ID" min-width="160" show-overflow-tooltip />
+        <el-table-column prop="orderAmount" label="订单金额" width="100" />
+        <el-table-column prop="allocateAmount" label="分配金额" width="100" />
+        <el-table-column prop="payAmount" label="支付金额" width="100" />
+        <el-table-column prop="payType" label="支付类型" width="100"><template #default="{row}">{{ row.payType === 'epay' ? '易支付' : '后台手动' }}</template></el-table-column>
+        <el-table-column prop="payTime" label="支付时间" width="180" />
+        <el-table-column prop="ip" label="IP地址" width="140" />
+        <el-table-column prop="remark" label="备注" min-width="120" show-overflow-tooltip />
+        <el-table-column prop="createdAt" label="添加时间" width="180" />
+        <el-table-column label="状态" width="90"><template #default="{row}"><el-tag :type="row.status === 1 ? 'success' : row.status === 2 ? 'danger' : 'info'">{{ row.status === 1 ? '已支付' : row.status === 2 ? '已取消' : '待支付' }}</el-tag></template></el-table-column>
+        <el-table-column label="操作" width="160" fixed="right">
+          <template #default="{row}"><el-button size="small" @click="openRechargeDialog(row)">编辑</el-button><el-button size="small" type="danger" @click="deleteRechargeOrder(row.id)">删除</el-button></template>
+        </el-table-column>
+      </el-table>
+      <el-pagination style="margin-top:12px" background layout="prev,pager,next,total" :total="rechargeTotal" :page-size="20" @current-change="loadRechargeOrders" />
     </el-card>
+
+    <el-card v-if="tab === 'sign-logs'">
+      <template #header><div class="toolbar"><span>签到管理</span><div><el-button type="primary" @click="openSignLog()">添加</el-button><el-button type="danger" :disabled="!selectedSignLogs.length" @click="batchDeleteSignLogs">批量删除</el-button><el-button @click="loadSignLogs">刷新</el-button></div></div></template>
+      <el-table :data="signLogs" border @selection-change="handleSignLogSelectionChange">
+        <el-table-column type="selection" width="50" />
+        <el-table-column prop="userId" label="用户ID" width="90" />
+        <el-table-column prop="username" label="用户名" min-width="120" />
+        <el-table-column prop="signDate" label="签到日期" width="130" />
+        <el-table-column prop="consecutiveDays" label="连续天数" width="100" />
+        <el-table-column prop="reward" label="奖励积分" width="100" />
+        <el-table-column prop="createdAt" label="签到时间" width="180" />
+        <el-table-column label="操作" width="160" fixed="right">
+          <template #default="{row}"><el-button size="small" @click="openSignLog(row)">编辑</el-button><el-button size="small" type="danger" @click="deleteSignLog(row.id)">删除</el-button></template>
+        </el-table-column>
+      </el-table>
+      <el-pagination style="margin-top:12px" background layout="prev,pager,next,total" :total="signLogTotal" :page-size="20" @current-change="loadSignLogs" />
+    </el-card>
+
+    <el-dialog v-model="signLogVisible" :title="signLogForm.id ? '编辑签到记录' : '添加签到记录'" width="520px">
+      <el-form :model="signLogForm" label-width="100px">
+        <el-form-item label="用户ID"><el-input v-model="signLogForm.userId" /></el-form-item>
+        <el-form-item label="签到日期"><el-date-picker v-model="signLogForm.signDate" type="date" placeholder="选择签到日期" style="width:240px" /></el-form-item>
+        <el-form-item label="连续天数"><el-input-number v-model="signLogForm.consecutiveDays" :min="1" /></el-form-item>
+        <el-form-item label="奖励积分"><el-input-number v-model="signLogForm.reward" :min="0" /></el-form-item>
+      </el-form>
+      <template #footer><el-button @click="signLogVisible=false">取消</el-button><el-button type="primary" @click="saveSignLog">保存</el-button></template>
+    </el-dialog>
 
     <el-dialog v-model="memberVisible" :title="memberForm.id ? '编辑会员' : '添加会员'" width="520px">
       <el-form :model="memberForm" label-width="100px">
         <el-form-item label="用户名" :required="!memberForm.id"><el-input v-model="memberForm.username" placeholder="用于登录，至少2个字符；历史账号可留空" /></el-form-item>
         <el-form-item label="昵称"><el-input v-model="memberForm.nickname" placeholder="页面展示名称" /></el-form-item>
         <el-form-item label="邮箱"><el-input v-model="memberForm.email" placeholder="留空时生成内部邮箱" /></el-form-item>
+        <el-form-item label="手机号"><el-input v-model="memberForm.phone" placeholder="选填" /></el-form-item>
+        <el-form-item label="头像"><el-upload action="" :http-request="uploadAvatar" :show-file-list="false"><el-image v-if="memberForm.avatar" :src="memberForm.avatar" style="width:80px;height:80px" /><el-button v-else>上传头像</el-button></el-upload></el-form-item>
+        <el-form-item label="会员到期"><el-date-picker v-model="memberForm.memberExpireAt" type="datetime" placeholder="选择到期时间" :disabled="memberForm.memberIsPermanent" style="width:240px" /><el-switch v-model="memberForm.memberIsPermanent" active-text="永久会员" style="margin-left:12px" @change="(v:boolean) => { if(v) memberForm.memberExpireAt = null }" /></el-form-item>
+        <el-form-item label="等级"><el-input-number v-model="memberForm.memberLevel" :min="0" /></el-form-item>
         <el-form-item :label="memberForm.id ? '新密码' : '登录密码'" :required="!memberForm.id"><el-input v-model="memberForm.password" type="password" show-password :placeholder="memberForm.id ? '留空则不修改密码' : '至少6个字符'" /></el-form-item>
         <el-form-item label="会员套餐"><el-select v-model="memberForm.levelId"><el-option label="普通用户" :value="0" /><el-option v-for="l in levels" :key="l.id" :label="l.name" :value="l.id" /></el-select></el-form-item>
         <el-form-item label="授权说明"><el-input v-model="memberForm.remark" placeholder="后台授予/调整的原因" /></el-form-item>
@@ -151,6 +206,9 @@
         <el-form-item label="购买折扣"><el-input-number v-model="groupForm.discount" :min="0.01" :max="1" :precision="2" :step="0.05" /><span class="field-suffix">1 = 原价</span></el-form-item>
         <el-form-item label="每日积分"><el-input-number v-model="groupForm.dailyScore" :min="0" /></el-form-item>
         <el-form-item label="排序"><el-input-number v-model="groupForm.sort" :min="0" /></el-form-item>
+        <el-form-item label="设备登录上限"><el-input-number v-model="groupForm.deviceLimit" :min="0" /><span class="field-suffix">0表示不限制</span></el-form-item>
+        <el-form-item label="登录超限处理"><el-select v-model="groupForm.loginOverflowAction"><el-option label="拒绝登录" value="reject_new" /><el-option label="下线最早设备" value="kick_oldest" /></el-select></el-form-item>
+        <el-form-item label="等级"><el-input-number v-model="groupForm.level" :min="0" /></el-form-item>
         <el-form-item label="可购买"><el-switch v-model="groupForm.status" :active-value="1" :inactive-value="0" /></el-form-item>
       </el-form>
       <template #footer><el-button @click="groupVisible=false">取消</el-button><el-button type="primary" @click="saveGroup">保存</el-button></template>
@@ -161,7 +219,7 @@
         <el-form-item label="规则名称"><el-input v-model="ruleForm.name" /></el-form-item>
         <el-form-item label="规则类型"><el-select v-model="ruleForm.type"><el-option label="播放清晰度" value="play_quality" /><el-option label="下载权限" value="download" /><el-option label="每日播放次数" value="daily_play_limit" /><el-option label="广告豁免" value="ad_free" /></el-select></el-form-item>
         <el-form-item label="规则值"><el-input v-model="ruleForm.value" placeholder="如 1080p、true、50" /></el-form-item>
-        <el-form-item label="适用等级"><el-select v-model="ruleForm.levelId"><el-option label="全部" :value="0" /><el-option v-for="l in levels" :key="l.id" :label="l.name" :value="l.id" /></el-select></el-form-item>
+        <el-form-item label="适用等级"><el-select v-model="ruleForm.levelId"><el-option label="全部" :value="0" /><el-option v-for="g in groups" :key="g.id" :label="g.name" :value="g.id" /></el-select></el-form-item>
         <el-form-item label="排序"><el-input-number v-model="ruleForm.sort" :min="0" /></el-form-item>
         <el-form-item label="状态"><el-switch v-model="ruleForm.status" :active-value="1" :inactive-value="0" /></el-form-item>
       </el-form>
@@ -175,13 +233,52 @@
       </el-form>
       <template #footer><el-button @click="codeVisible=false">取消</el-button><el-button type="primary" @click="generateCodes">生成</el-button></template>
     </el-dialog>
+
+    <el-dialog v-model="balanceLogVisible" :title="balanceLogForm.id ? '编辑余额日志' : '添加余额日志'" width="520px">
+      <el-form :model="balanceLogForm" label-width="100px">
+        <el-form-item label="用户ID"><el-input v-model="balanceLogForm.userId" /></el-form-item>
+        <el-form-item label="类型"><el-select v-model="balanceLogForm.type"><el-option label="充值" value="recharge" /><el-option label="扣费" value="deduct" /><el-option label="调整" value="adjust" /></el-select></el-form-item>
+        <el-form-item label="变动金额"><el-input-number v-model="balanceLogForm.amount" :step="0.01" /></el-form-item>
+        <el-form-item label="变动后余额"><el-input-number v-model="balanceLogForm.balance" :step="0.01" /></el-form-item>
+        <el-form-item label="订单号"><el-input v-model="balanceLogForm.orderId" /></el-form-item>
+        <el-form-item label="备注"><el-input v-model="balanceLogForm.remark" /></el-form-item>
+      </el-form>
+      <template #footer><el-button @click="balanceLogVisible=false">取消</el-button><el-button type="primary" @click="saveBalanceLog">保存</el-button></template>
+    </el-dialog>
+
+    <el-dialog v-model="scoreLogVisible" :title="scoreLogForm.id ? '编辑积分日志' : '添加积分日志'" width="520px">
+      <el-form :model="scoreLogForm" label-width="100px">
+        <el-form-item label="用户ID"><el-input v-model="scoreLogForm.userId" /></el-form-item>
+        <el-form-item label="类型"><el-select v-model="scoreLogForm.type"><el-option label="签到" value="sign_in" /><el-option label="消费" value="consume" /><el-option label="调整" value="adjust" /></el-select></el-form-item>
+        <el-form-item label="积分"><el-input-number v-model="scoreLogForm.score" /></el-form-item>
+        <el-form-item label="变动后积分"><el-input-number v-model="scoreLogForm.balance" /></el-form-item>
+        <el-form-item label="备注"><el-input v-model="scoreLogForm.remark" /></el-form-item>
+      </el-form>
+      <template #footer><el-button @click="scoreLogVisible=false">取消</el-button><el-button type="primary" @click="saveScoreLog">保存</el-button></template>
+    </el-dialog>
+
+    <el-dialog v-model="rechargeVisible" :title="rechargeForm.id ? '编辑充值记录' : '添加充值记录'" width="520px">
+      <el-form :model="rechargeForm" label-width="100px">
+        <el-form-item label="用户ID"><el-input v-model="rechargeForm.userId" /></el-form-item>
+        <el-form-item label="订单ID"><el-input v-model="rechargeForm.orderId" /></el-form-item>
+        <el-form-item label="订单金额"><el-input-number v-model="rechargeForm.orderAmount" :step="0.01" /></el-form-item>
+        <el-form-item label="分配金额"><el-input-number v-model="rechargeForm.allocateAmount" :step="0.01" /></el-form-item>
+        <el-form-item label="支付金额"><el-input-number v-model="rechargeForm.payAmount" :step="0.01" /></el-form-item>
+        <el-form-item label="支付类型"><el-select v-model="rechargeForm.payType"><el-option label="后台手动" value="admin" /><el-option label="易支付" value="epay" /></el-select></el-form-item>
+        <el-form-item label="支付时间"><el-date-picker v-model="rechargeForm.payTime" type="datetime" placeholder="选择支付时间" /></el-form-item>
+        <el-form-item label="IP地址"><el-input v-model="rechargeForm.ip" /></el-form-item>
+        <el-form-item label="备注"><el-input v-model="rechargeForm.remark" /></el-form-item>
+        <el-form-item label="状态"><el-select v-model="rechargeForm.status"><el-option label="待支付" :value="0" /><el-option label="已支付" :value="1" /><el-option label="已取消" :value="2" /></el-select></el-form-item>
+      </el-form>
+      <template #footer><el-button @click="rechargeVisible=false">取消</el-button><el-button type="primary" @click="saveRechargeOrder">保存</el-button></template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { memberApi } from '@/api'
+import { memberApi, uploadApi } from '@/api'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const route = useRoute()
@@ -193,7 +290,8 @@ const metaMap: Record<string, { title: string; desc: string }> = {
   'balance-logs': { title: '会员余额日志', desc: '查看会员余额充值和扣费流水。' },
   'score-logs': { title: '会员积分日志', desc: '查看会员签到、消费和后台调整积分流水。' },
   codes: { title: '卡密列表管理', desc: '生成、查看、删除和批量管理会员卡密。' },
-  recharge: { title: '充值管理', desc: '后台手动为会员充值余额。' },
+  recharge: { title: '充值管理', desc: '查看和管理所有充值订单记录。' },
+  'sign-logs': { title: '签到管理', desc: '查看和管理用户签到记录。' },
 }
 const pageTitle = computed(() => metaMap[tab.value]?.title || '会员管理')
 const pageDesc = computed(() => metaMap[tab.value]?.desc || '')
@@ -204,10 +302,20 @@ const memberTotal = ref(0)
 const groups = ref<any[]>([])
 const rules = ref<any[]>([])
 const balanceLogs = ref<any[]>([])
+const balanceLogTotal = ref(0)
 const scoreLogs = ref<any[]>([])
+const scoreLogTotal = ref(0)
 const codes = ref<any[]>([])
+const rechargeOrders = ref<any[]>([])
+const rechargeTotal = ref(0)
+const signLogs = ref<any[]>([])
+const signLogTotal = ref(0)
 const selectedCodes = ref<number[]>([])
 const selectedMembers = ref<number[]>([])
+const selectedBalanceLogs = ref<number[]>([])
+const selectedScoreLogs = ref<number[]>([])
+const selectedRechargeIds = ref<number[]>([])
+const selectedSignLogs = ref<number[]>([])
 const memberKeyword = ref('')
 const memberStatus = ref<string | undefined>()
 
@@ -221,7 +329,14 @@ const ruleVisible = ref(false)
 const ruleForm = ref<any>({})
 const codeVisible = ref(false)
 const codeForm = ref<any>({ levelId: 0, count: 10 })
-const rechargeForm = ref({ userId: '', amount: 0, method: 'admin', remark: '' })
+const balanceLogVisible = ref(false)
+const balanceLogForm = ref<any>({})
+const scoreLogVisible = ref(false)
+const scoreLogForm = ref<any>({})
+const rechargeVisible = ref(false)
+const rechargeForm = ref<any>({})
+const signLogVisible = ref(false)
+const signLogForm = ref<any>({})
 
 const levelName = (id: number) => levels.value.find(l => l.id === id)?.name || ''
 
@@ -233,24 +348,30 @@ const loadBase = async () => {
 const loadMembers = async (page = 1) => { const res: any = await memberApi.getMembers({ page, size: 20, keyword: memberKeyword.value || undefined, status: memberStatus.value }); members.value = res.data?.list || []; memberTotal.value = res.data?.total || 0 }
 const loadGroups = async () => { const res: any = await memberApi.getGroups({ page: 1, size: 100 }); groups.value = res.data?.list || res.data || [] }
 const loadRules = async () => { const res: any = await memberApi.getRules({ page: 1, size: 100 }); rules.value = res.data?.list || [] }
-const loadBalanceLogs = async () => { const res: any = await memberApi.getBalanceLogs({ page: 1, size: 100 }); balanceLogs.value = res.data?.list || [] }
-const loadScoreLogs = async () => { const res: any = await memberApi.getScoreLogs({ page: 1, size: 100 }); scoreLogs.value = res.data?.list || [] }
+const loadBalanceLogs = async (page = 1) => { const res: any = await memberApi.getBalanceLogs({ page, size: 20 }); balanceLogs.value = res.data?.list || []; balanceLogTotal.value = res.data?.total || 0 }
+const loadScoreLogs = async (page = 1) => { const res: any = await memberApi.getScoreLogs({ page, size: 20 }); scoreLogs.value = res.data?.list || []; scoreLogTotal.value = res.data?.total || 0 }
 const loadCodes = async () => { const res: any = await memberApi.getCodes({ page: 1, size: 100 }); codes.value = res.data?.list || [] }
+const loadRechargeOrders = async (page = 1) => { const res: any = await memberApi.getRechargeOrders({ page, size: 20 }); rechargeOrders.value = res.data?.list || []; rechargeTotal.value = res.data?.total || 0 }
+const loadSignLogs = async (page = 1) => { const res: any = await memberApi.getSignLogs({ page, size: 20 }); signLogs.value = res.data?.list || []; signLogTotal.value = res.data?.total || 0 }
 
 const loadCurrent = async () => {
   await loadBase()
   if (tab.value === 'users') await loadMembers()
   if (tab.value === 'groups') await loadGroups()
-  if (tab.value === 'rules') await loadRules()
+  if (tab.value === 'rules') { await loadRules(); await loadGroups() }
   if (tab.value === 'balance-logs') await loadBalanceLogs()
   if (tab.value === 'score-logs') await loadScoreLogs()
   if (tab.value === 'codes') await loadCodes()
+  if (tab.value === 'recharge') await loadRechargeOrders()
+  if (tab.value === 'sign-logs') await loadSignLogs()
 }
 
 onMounted(loadCurrent)
 watch(tab, loadCurrent)
 
-const openMember = (row?: any) => { memberForm.value = row ? { ...row, password: '', remark: '' } : { username: '', nickname: '', email: '', password: '', levelId: 0, score: 0, balance: 0, status: 1, remark: '' }; memberVisible.value = true }
+const uploadAvatar = async (options: any) => { const fd = new FormData(); fd.append('file', options.file); const res: any = await uploadApi.image(fd); memberForm.value.avatar = res.data?.url || res.url }
+
+const openMember = (row?: any) => { memberForm.value = row ? { ...row, password: '', remark: '', phone: row.phone || '', avatar: row.avatar || '', memberExpireAt: row.memberExpireAt || null, memberIsPermanent: !row.memberExpireAt, memberLevel: row.memberLevel || 0 } : { username: '', nickname: '', email: '', phone: '', avatar: '', memberExpireAt: null, memberIsPermanent: false, memberLevel: 0, password: '', levelId: 0, score: 0, balance: 0, status: 1, remark: '' }; memberVisible.value = true }
 const saveMember = async () => {
   if (!memberForm.value.id && !memberForm.value.username?.trim()) return ElMessage.warning('请输入用户名')
   if (!memberForm.value.id && !memberForm.value.password) return ElMessage.warning('请输入登录密码')
@@ -270,7 +391,7 @@ const submitMemberBatch = async () => {
   ElMessage.success('批量操作成功'); memberBatchVisible.value = false; loadMembers()
 }
 
-const openGroupDialog = (row?: any) => { groupForm.value = row ? { ...row, discount: row.discount ?? 1 } : { name: '', price: 0, duration: 30, isPermanent: false, description: '', discount: 1, dailyScore: 0, status: 1, sort: 0 }; groupVisible.value = true }
+const openGroupDialog = (row?: any) => { groupForm.value = row ? { ...row, discount: row.discount ?? 1, deviceLimit: row.deviceLimit ?? 0, loginOverflowAction: row.loginOverflowAction || 'kick_oldest', level: row.level ?? 0 } : { name: '', price: 0, duration: 30, isPermanent: false, description: '', discount: 1, dailyScore: 0, status: 1, sort: 0, deviceLimit: 0, loginOverflowAction: 'kick_oldest', level: 0 }; groupVisible.value = true }
 const saveGroup = async () => { if (groupForm.value.id) await memberApi.updateGroup(groupForm.value.id, groupForm.value); else await memberApi.createGroup(groupForm.value); ElMessage.success('保存成功'); groupVisible.value = false; loadGroups() }
 const delGroup = async (id: number) => { await ElMessageBox.confirm('确认删除该分组？', '提示', { type: 'warning' }); await memberApi.removeGroup(id); ElMessage.success('删除成功'); loadGroups() }
 
@@ -283,8 +404,36 @@ const generateCodes = async () => { await memberApi.generateCodes(codeForm.value
 const deleteCode = async (id: number) => { await ElMessageBox.confirm('确认删除该卡密？', '提示', { type: 'warning' }); await memberApi.deleteCode(id); ElMessage.success('删除成功'); loadCodes() }
 const batchDeleteCodes = async () => { await ElMessageBox.confirm(`确认删除选中的 ${selectedCodes.value.length} 个卡密？`, '提示', { type: 'warning' }); await memberApi.batchDeleteCodes(selectedCodes.value); ElMessage.success('批量删除成功'); loadCodes() }
 
-const openRecharge = (userId: string) => { rechargeForm.value = { userId, amount: 0, method: 'admin', remark: '' }; window.location.hash = '#/member/recharge' }
-const submitRecharge = async () => { if (!rechargeForm.value.userId) return ElMessage.warning('请输入用户ID'); await memberApi.recharge(rechargeForm.value.userId, { amount: rechargeForm.value.amount, method: rechargeForm.value.method, remark: rechargeForm.value.remark }); ElMessage.success('充值成功'); rechargeForm.value = { userId: '', amount: 0, method: 'admin', remark: '' } }
+const handleBalanceLogSelectionChange = (rows: any[]) => { selectedBalanceLogs.value = rows.map(r => r.id) }
+const openBalanceLog = (row?: any) => { balanceLogForm.value = row ? { ...row } : { userId: '', type: 'recharge', amount: 0, balance: 0, orderId: '', remark: '' }; balanceLogVisible.value = true }
+const saveBalanceLog = async () => { if (balanceLogForm.value.id) await memberApi.updateBalanceLog(balanceLogForm.value.id, balanceLogForm.value); else await memberApi.createBalanceLog(balanceLogForm.value); ElMessage.success('保存成功'); balanceLogVisible.value = false; loadBalanceLogs() }
+const deleteBalanceLog = async (id: number) => { await ElMessageBox.confirm('确认删除该余额日志？', '提示', { type: 'warning' }); await memberApi.deleteBalanceLog(id); ElMessage.success('删除成功'); loadBalanceLogs() }
+const batchDeleteBalanceLogs = async () => { await ElMessageBox.confirm(`确认删除选中的 ${selectedBalanceLogs.value.length} 条余额日志？`, '提示', { type: 'warning' }); await memberApi.batchDeleteBalanceLogs(selectedBalanceLogs.value); ElMessage.success('批量删除成功'); loadBalanceLogs() }
+
+const handleScoreLogSelectionChange = (rows: any[]) => { selectedScoreLogs.value = rows.map(r => r.id) }
+const openScoreLog = (row?: any) => { scoreLogForm.value = row ? { ...row } : { userId: '', type: 'sign_in', score: 0, balance: 0, remark: '' }; scoreLogVisible.value = true }
+const saveScoreLog = async () => { if (scoreLogForm.value.id) await memberApi.updateScoreLog(scoreLogForm.value.id, scoreLogForm.value); else await memberApi.createScoreLog(scoreLogForm.value); ElMessage.success('保存成功'); scoreLogVisible.value = false; loadScoreLogs() }
+const deleteScoreLog = async (id: number) => { await ElMessageBox.confirm('确认删除该积分日志？', '提示', { type: 'warning' }); await memberApi.deleteScoreLog(id); ElMessage.success('删除成功'); loadScoreLogs() }
+const batchDeleteScoreLogs = async () => { await ElMessageBox.confirm(`确认删除选中的 ${selectedScoreLogs.value.length} 条积分日志？`, '提示', { type: 'warning' }); await memberApi.batchDeleteScoreLogs(selectedScoreLogs.value); ElMessage.success('批量删除成功'); loadScoreLogs() }
+
+const openRecharge = (userId: string) => { window.location.hash = '#/member/recharge' }
+const handleRechargeSelectionChange = (rows: any[]) => { selectedRechargeIds.value = rows.map(r => r.id) }
+const openRechargeDialog = (row?: any) => { rechargeForm.value = row ? { ...row } : { userId: '', orderId: '', orderAmount: 0, allocateAmount: 0, payAmount: 0, payType: 'admin', payTime: '', ip: '', remark: '', status: 1 }; rechargeVisible.value = true }
+const saveRechargeOrder = async () => { if (rechargeForm.value.id) await memberApi.updateRechargeOrder(rechargeForm.value.id, rechargeForm.value); else await memberApi.createRechargeOrder(rechargeForm.value); ElMessage.success('保存成功'); rechargeVisible.value = false; loadRechargeOrders() }
+const deleteRechargeOrder = async (id: number) => { await ElMessageBox.confirm('确认删除该充值记录？', '提示', { type: 'warning' }); await memberApi.deleteRechargeOrder(id); ElMessage.success('删除成功'); loadRechargeOrders() }
+const batchDeleteRechargeOrders = async () => { await ElMessageBox.confirm(`确认删除选中的 ${selectedRechargeIds.value.length} 条充值记录？`, '提示', { type: 'warning' }); await memberApi.batchDeleteRechargeOrders(selectedRechargeIds.value); ElMessage.success('批量删除成功'); loadRechargeOrders() }
+
+const handleSignLogSelectionChange = (rows: any[]) => { selectedSignLogs.value = rows.map(r => r.id) }
+const openSignLog = (row?: any) => { signLogForm.value = row ? { ...row, signDate: row.signDate || '' } : { userId: '', signDate: '', consecutiveDays: 1, reward: 0 }; signLogVisible.value = true }
+const saveSignLog = async () => { 
+  const payload = { ...signLogForm.value }
+  if (payload.signDate instanceof Date) payload.signDate = payload.signDate.toISOString().split('T')[0]
+  if (payload.id) await memberApi.updateSignLog(payload.id, payload)
+  else await memberApi.createSignLog(payload)
+  ElMessage.success('保存成功'); signLogVisible.value = false; loadSignLogs() 
+}
+const deleteSignLog = async (id: number) => { await ElMessageBox.confirm('确认删除该签到记录？', '提示', { type: 'warning' }); await memberApi.deleteSignLog(id); ElMessage.success('删除成功'); loadSignLogs() }
+const batchDeleteSignLogs = async () => { await ElMessageBox.confirm(`确认删除选中的 ${selectedSignLogs.value.length} 条签到记录？`, '提示', { type: 'warning' }); await memberApi.batchDeleteSignLogs(selectedSignLogs.value); ElMessage.success('批量删除成功'); loadSignLogs() }
 </script>
 
 <style scoped>

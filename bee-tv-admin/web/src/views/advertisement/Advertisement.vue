@@ -68,11 +68,19 @@
           <el-input v-model="form.title" placeholder="请输入广告标题" />
         </el-form-item>
         <el-form-item label="图片URL">
-          <el-input v-model="form.image" placeholder="请输入图片URL" />
+          <div style="display:flex;gap:8px;align-items:flex-start">
+            <el-input v-model="form.image" placeholder="请输入图片URL或上传图片" style="flex:1" />
+            <el-upload :show-file-list="false" :before-upload="(file: any) => handleAdImageUpload(file)" accept="image/*">
+              <el-button type="primary" size="small">上传图片</el-button>
+            </el-upload>
+          </div>
           <el-image v-if="form.image" :src="form.image" style="width:120px;height:80px;margin-top:8px" fit="cover" />
         </el-form-item>
         <el-form-item label="点击链接">
           <el-input v-model="form.link" placeholder="请输入点击链接" />
+        </el-form-item>
+        <el-form-item label="参数">
+          <el-input v-model="form.params" type="textarea" :rows="2" placeholder="如：live===1008611 代表直播链接，web===http://xxx/index.html 代表打开网页" />
         </el-form-item>
         <el-form-item label="广告位置">
           <el-select v-model="form.position" placeholder="请选择位置" style="width:100%">
@@ -109,7 +117,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { advertisementApi } from '@/api'
+import { advertisementApi, uploadApi } from '@/api'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 interface AdForm {
@@ -117,12 +125,13 @@ interface AdForm {
   title: string
   image: string
   link: string
+  params: string
   position: string
   appIds: string
   sort: number
   status: number
-  startAt: string
-  endAt: string
+  startAt: string | null
+  endAt: string | null
 }
 
 const list = ref<any[]>([])
@@ -147,12 +156,13 @@ const form = ref<AdForm>({
   title: '',
   image: '',
   link: '',
+  params: '',
   position: '',
   appIds: '',
   sort: 0,
   status: 1,
-  startAt: '',
-  endAt: ''
+  startAt: null,
+  endAt: null
 })
 
 onMounted(() => loadData())
@@ -185,6 +195,7 @@ const openDialog = (row?: any) => {
       title: '',
       image: '',
       link: '',
+      params: '',
       position: '',
       appIds: '',
       sort: 0,
@@ -197,10 +208,14 @@ const openDialog = (row?: any) => {
 }
 
 const handleSave = async () => {
+  const payload = { ...form.value }
+  // Fix: empty date strings cause Prisma DateTime error
+  if (!payload.startAt) payload.startAt = null
+  if (!payload.endAt) payload.endAt = null
   if (editing.value.id) {
-    await advertisementApi.update(editing.value.id, form.value)
+    await advertisementApi.update(editing.value.id, payload)
   } else {
-    await advertisementApi.create(form.value)
+    await advertisementApi.create(payload)
   }
   ElMessage.success('保存成功')
   visible.value = false
@@ -230,5 +245,13 @@ const handleStatusChange = async (row: any) => {
     row.status = row.status === 1 ? 0 : 1
     ElMessage.error('状态更新失败')
   }
+}
+
+const handleAdImageUpload = async (file: File) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  const res: any = await uploadApi.image(formData)
+  form.value.image = res.data.url
+  return false
 }
 </script>

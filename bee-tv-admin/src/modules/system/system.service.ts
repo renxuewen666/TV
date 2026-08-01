@@ -25,8 +25,6 @@ const DEFAULT_CONFIGS: Record<string, { value: string; group: string; remark: st
   reg_bonus_score: { value: '0', group: 'member', remark: '注册赠送积分' },
   reg_bonus_member: { value: '0', group: 'member', remark: '注册赠送会员天数' },
   token_expire_hours: { value: '168', group: 'member', remark: 'TOKEN有效期(小时)' },
-  device_limit_mode: { value: 'kick_oldest', group: 'member', remark: '设备超限处理(kick_oldest/reject_new)' },
-  device_limit_count: { value: '3', group: 'member', remark: '最大登录设备数' },
   default_group_discount: { value: '1.0', group: 'member', remark: '默认分组折扣' },
 
   // 支付配置（入口在“支付管理 - 支付配置”）
@@ -52,7 +50,7 @@ const DEFAULT_CONFIGS: Record<string, { value: string; group: string; remark: st
   weather_show: { value: 'true', group: 'general', remark: '显示天气预报开关' },
 
   // 播放器配置
-  default_player: { value: 'system', group: 'player', remark: '默认播放器(system/ljk/exo)' },
+  default_player: { value: 'system', group: 'player', remark: '默认播放器' },
   custom_repo_mode: { value: 'auto', group: 'player', remark: '自定仓库(off/on/auto)' },
   source_rename_config: { value: '{}', group: 'player', remark: '播放源重命名配置(JSON)' },
   player_min_buffer_ms: { value: '32000', group: 'player', remark: '最小缓冲(ms)' },

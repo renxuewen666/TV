@@ -19,6 +19,7 @@
           <el-menu-item index="/system/member">会员配置</el-menu-item>
           <el-menu-item index="/system/general">通用配置</el-menu-item>
           <el-menu-item index="/system/player">播放器配置</el-menu-item>
+          <el-menu-item index="/attachment">附件管理</el-menu-item>
         </el-sub-menu>
 
         <el-sub-menu index="permission">
@@ -51,6 +52,7 @@
           <el-menu-item index="/member/score-logs">会员积分日志</el-menu-item>
           <el-menu-item index="/member/codes">卡密列表管理</el-menu-item>
           <el-menu-item index="/member/recharge">充值管理</el-menu-item>
+          <el-menu-item index="/member/signin">签到管理</el-menu-item>
         </el-sub-menu>
 
         <el-sub-menu index="payment-menu">

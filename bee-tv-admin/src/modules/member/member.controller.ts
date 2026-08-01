@@ -5,7 +5,7 @@ import { AdminAuthGuard } from '../../common/guards/admin-auth.guard';
 import { Public } from '../../common/decorators/public.decorator';
 import { AllowAppUser } from '../../common/decorators/allow-app-user.decorator';
 import { MemberService } from './member.service';
-import { BatchMemberDto, CreateLevelDto, CreateMemberDto, UpdateLevelDto, UpdateMemberDto, CreateMemberRuleDto, UpdateMemberRuleDto } from './dto/member.dto';
+import { BatchMemberDto, CreateLevelDto, CreateMemberDto, UpdateLevelDto, UpdateMemberDto, CreateMemberRuleDto, UpdateMemberRuleDto, CreateMemberGroupDto, UpdateMemberGroupDto } from './dto/member.dto';
 import { SystemService } from '../system/system.service';
 
 @ApiTags('会员配置')
@@ -132,6 +132,47 @@ export class MemberController {
     return this.memberService.getScoreLogs(+(page || 1), +(size || 20), userId);
   }
 
+  @Post('balance-logs')
+  createBalanceLog(@Body() body: any) { return this.memberService.createBalanceLog(body); }
+
+  @Put('balance-logs/:id')
+  updateBalanceLog(@Param('id') id: string, @Body() body: any) { return this.memberService.updateBalanceLog(+id, body); }
+
+  @Delete('balance-logs/:id')
+  deleteBalanceLog(@Param('id') id: string) { return this.memberService.deleteBalanceLog(+id); }
+
+  @Post('balance-logs/batch-delete')
+  batchDeleteBalanceLogs(@Body() body: { ids: number[] }) { return this.memberService.batchDeleteBalanceLogs(body.ids); }
+
+  @Post('score-logs')
+  createScoreLog(@Body() body: any) { return this.memberService.createScoreLog(body); }
+
+  @Put('score-logs/:id')
+  updateScoreLog(@Param('id') id: string, @Body() body: any) { return this.memberService.updateScoreLog(+id, body); }
+
+  @Delete('score-logs/:id')
+  deleteScoreLog(@Param('id') id: string) { return this.memberService.deleteScoreLog(+id); }
+
+  @Post('score-logs/batch-delete')
+  batchDeleteScoreLogs(@Body() body: { ids: number[] }) { return this.memberService.batchDeleteScoreLogs(body.ids); }
+
+  @Get('recharge-orders')
+  getRechargeOrders(@Query('page') page?: string, @Query('size') size?: string, @Query('keyword') keyword?: string, @Query('status') status?: string) {
+    return this.memberService.getRechargeOrders({ page: +(page || 1), size: +(size || 20), keyword, status: status ? +status : undefined });
+  }
+
+  @Post('recharge-orders')
+  createRechargeOrder(@Body() body: any) { return this.memberService.createRechargeOrder(body); }
+
+  @Put('recharge-orders/:id')
+  updateRechargeOrder(@Param('id') id: string, @Body() body: any) { return this.memberService.updateRechargeOrder(+id, body); }
+
+  @Delete('recharge-orders/:id')
+  deleteRechargeOrder(@Param('id') id: string) { return this.memberService.deleteRechargeOrder(+id); }
+
+  @Post('recharge-orders/batch-delete')
+  batchDeleteRechargeOrders(@Body() body: { ids: number[] }) { return this.memberService.batchDeleteRechargeOrders(body.ids || []); }
+
   @Post('recharge/:userId')
   async recharge(@Param('userId') userId: string, @Body() body: { amount: number; method: string; remark?: string }) {
     return this.memberService.recharge(userId, body.amount, body.method, body.remark);
@@ -140,5 +181,51 @@ export class MemberController {
   @Get('exportable-codes')
   async getExportableCodes(@Query('levelId') levelId?: number, @Query('status') status?: number) {
     return this.memberService.getExportableCodes(levelId, status);
+  }
+
+  @Get('groups')
+  getGroups(@Query('page') page?: string, @Query('size') size?: string) {
+    return this.memberService.getGroups({ page: +(page || 1), size: +(size || 100) });
+  }
+
+  @Post('groups')
+  createGroup(@Body() dto: CreateMemberGroupDto) {
+    return this.memberService.createGroup(dto);
+  }
+
+  @Put('groups/:id')
+  updateGroup(@Param('id') id: string, @Body() dto: UpdateMemberGroupDto) {
+    return this.memberService.updateGroup(+id, dto);
+  }
+
+  @Delete('groups/:id')
+  deleteGroup(@Param('id') id: string) {
+    return this.memberService.deleteGroup(+id);
+  }
+
+  // ============ SignLog ============
+  @Get('sign-logs')
+  getSignLogs(@Query('page') page?: string, @Query('size') size?: string, @Query('keyword') keyword?: string) {
+    return this.memberService.getSignLogs(+(page || 1), +(size || 20), keyword);
+  }
+
+  @Post('sign-logs')
+  createSignLog(@Body() body: { userId: string; signDate?: string; consecutiveDays?: number; reward?: number }) {
+    return this.memberService.createSignLog(body);
+  }
+
+  @Put('sign-logs/:id')
+  updateSignLog(@Param('id') id: string, @Body() body: any) {
+    return this.memberService.updateSignLog(+id, body);
+  }
+
+  @Delete('sign-logs/:id')
+  deleteSignLog(@Param('id') id: string) {
+    return this.memberService.deleteSignLog(+id);
+  }
+
+  @Post('sign-logs/batch-delete')
+  batchDeleteSignLogs(@Body() body: { ids: number[] }) {
+    return this.memberService.batchDeleteSignLogs(body.ids || []);
   }
 }

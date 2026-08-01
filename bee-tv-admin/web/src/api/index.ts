@@ -69,6 +69,28 @@ export const memberApi = {
   createGroup: (data: any) => request.post('/member/groups', data),
   updateGroup: (id: number, data: any) => request.put(`/member/groups/${id}`, data),
   removeGroup: (id: number) => request.delete(`/member/groups/${id}`),
+  // 充值订单
+  getRechargeOrders: (params?: any) => request.get('/member/recharge-orders', { params }),
+  createRechargeOrder: (data: any) => request.post('/member/recharge-orders', data),
+  updateRechargeOrder: (id: number, data: any) => request.put(`/member/recharge-orders/${id}`, data),
+  deleteRechargeOrder: (id: number) => request.delete(`/member/recharge-orders/${id}`),
+  batchDeleteRechargeOrders: (ids: number[]) => request.post('/member/recharge-orders/batch-delete', { ids }),
+  // 余额日志
+  createBalanceLog: (data: any) => request.post('/member/balance-logs', data),
+  updateBalanceLog: (id: number, data: any) => request.put(`/member/balance-logs/${id}`, data),
+  deleteBalanceLog: (id: number) => request.delete(`/member/balance-logs/${id}`),
+  batchDeleteBalanceLogs: (ids: number[]) => request.post('/member/balance-logs/batch-delete', { ids }),
+  // 积分日志
+  createScoreLog: (data: any) => request.post('/member/score-logs', data),
+  updateScoreLog: (id: number, data: any) => request.put(`/member/score-logs/${id}`, data),
+  deleteScoreLog: (id: number) => request.delete(`/member/score-logs/${id}`),
+  batchDeleteScoreLogs: (ids: number[]) => request.post('/member/score-logs/batch-delete', { ids }),
+  // 签到管理
+  getSignLogs: (params?: any) => request.get('/member/sign-logs', { params }),
+  createSignLog: (data: any) => request.post('/member/sign-logs', data),
+  updateSignLog: (id: number, data: any) => request.put(`/member/sign-logs/${id}`, data),
+  deleteSignLog: (id: number) => request.delete(`/member/sign-logs/${id}`),
+  batchDeleteSignLogs: (ids: number[]) => request.post('/member/sign-logs/batch-delete', { ids }),
 }
 
 export const paymentApi = {
@@ -228,4 +250,16 @@ export const danmakuApi = {
   updateSort: (id: number, sort: number) => request.put(`/danmaku/${id}/sort`, { sort }),
   batchDelete: (ids: number[]) => request.put('/danmaku/batch/delete', { ids }),
   test: (id: number) => request.post(`/danmaku/${id}/test`),
+}
+
+export const uploadApi = {
+  image: (data: FormData) => request.post('/upload/image', data, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  file: (data: FormData) => request.post('/upload/file', data, { headers: { 'Content-Type': 'multipart/form-data' } }),
+}
+
+export const attachmentApi = {
+  list: (params?: any) => request.get('/attachment', { params }),
+  create: (data: any) => request.post('/attachment', data),
+  update: (id: number, data: any) => request.put(`/attachment/${id}`, data),
+  remove: (id: number) => request.delete(`/attachment/${id}`),
 }

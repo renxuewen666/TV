@@ -25,6 +25,9 @@
           <el-table-column label="默认线路" width="100">
             <template #default="{row}"><el-tag :type="row.isDefault ? 'success' : 'info'">{{ row.isDefault ? '默认' : '否' }}</el-tag></template>
           </el-table-column>
+          <el-table-column prop="appIds" label="绑定应用" width="120" />
+          <el-table-column prop="encrypted" label="加密" width="80"><template #default="{row}">{{ row.encrypted ? '是' : '否' }}</template></el-table-column>
+          <el-table-column prop="weight" label="权重" width="80" />
           <el-table-column prop="status" label="状态" width="90">
             <template #default="{row}"><el-tag :type="row.status?'success':'info'">{{ row.status ? '启用' : '禁用' }}</el-tag></template>
           </el-table-column>
@@ -80,8 +83,18 @@
         <el-form-item label="名称"><el-input v-model="form.name" /></el-form-item>
         <el-form-item label="地址"><el-input v-model="form.url" placeholder="http接口地址，JAR仓可留空后上传" /></el-form-item>
         <el-form-item label="类型"><el-select v-model="form.type"><el-option label="csp-jar" :value="0" /><el-option label="js仓" :value="1" /><el-option label="py线路" :value="2" /></el-select></el-form-item>
+        <el-form-item label="绑定应用">
+          <el-input v-model="form.appIds" placeholder="多个应用ID用逗号分隔，留空表示全部" />
+        </el-form-item>
         <el-form-item label="优先级"><el-input-number v-model="form.priority" :min="0" /></el-form-item>
+        <el-form-item label="加密线路">
+          <el-switch v-model="form.encrypted" />
+        </el-form-item>
         <el-form-item label="最低等级"><el-input-number v-model="form.minMemberLevel" :min="0" /><span class="hint">0 表示游客可用；会员等级低于此值不会收到该线路。</span></el-form-item>
+        <el-form-item label="权重">
+          <el-input-number v-model="form.weight" :min="0" />
+          <span class="hint">优先级权重，数值越大优先级越高</span>
+        </el-form-item>
         <el-form-item label="默认线路"><el-switch v-model="form.isDefault" /><span class="hint">可见线路中优先选默认，再按优先级排序。</span></el-form-item>
         <el-form-item label="状态"><el-switch v-model="form.status" :active-value="1" :inactive-value="0" /></el-form-item>
       </el-form>
@@ -231,7 +244,7 @@ const handleTabChange = async () => {
 }
 
 const openDialog = (row?: any) => {
-  form.value = row ? { ...row } : { name: '', url: '', type: 0, priority: 0, minMemberLevel: 0, isDefault: false, status: 1 }
+  form.value = row ? { ...row } : { name: '', url: '', type: 0, appIds: '', priority: 0, encrypted: false, minMemberLevel: 0, weight: 0, isDefault: false, status: 1 }
   visible.value = true
 }
 

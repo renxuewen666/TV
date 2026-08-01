@@ -358,6 +358,14 @@ public class Setting {
         Prefers.put("admin_url", url);
     }
 
+    public static String getConfigUrl() {
+        return Prefers.getString("config_url", "");
+    }
+
+    public static void putConfigUrl(String url) {
+        Prefers.put("config_url", url);
+    }
+
     public static String getAuthToken() {
         return Prefers.getString("auth_token", "");
     }

@@ -21,6 +21,15 @@ export class CreateRepoDto {
 
   @IsOptional() @IsInt()
   status?: number;
+
+  @IsOptional() @IsString()
+  appIds?: string;
+
+  @IsOptional() @IsBoolean()
+  encrypted?: boolean;
+
+  @IsOptional() @IsInt()
+  weight?: number;
 }
 
 export class UpdateRepoDto {
@@ -41,4 +50,13 @@ export class UpdateRepoDto {
 
   @IsOptional() @IsInt()
   status?: number;
+
+  @IsOptional() @IsString()
+  appIds?: string;
+
+  @IsOptional() @IsBoolean()
+  encrypted?: boolean;
+
+  @IsOptional() @IsInt()
+  weight?: number;
 }

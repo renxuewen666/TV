@@ -11,6 +11,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.viewbinding.ViewBinding;
 
 import com.beetv.android.tv.App;
@@ -84,7 +85,7 @@ public class SettingFragment extends BaseFragment implements LoginDialog.LoginCa
     protected void initEvent() {
         mBinding.memberCard.setOnClickListener(v -> {
             if (Setting.isLoggedIn()) {
-                UserCenterDialog.create(requireActivity()).show();
+                UserCenterDialog.create((AppCompatActivity) requireActivity()).show();
             } else {
                 onMemberLogin();
             }
@@ -100,7 +101,7 @@ public class SettingFragment extends BaseFragment implements LoginDialog.LoginCa
         mBinding.memberKeep.setOnClickListener(v -> KeepActivity.start(requireActivity()));
         mBinding.memberPackages.setOnClickListener(v -> onPackages());
         mBinding.memberActivate.setOnClickListener(v -> onActivateCode());
-        mBinding.memberVodRepo.setOnClickListener(v -> RepoListActivity.start(requireActivity()));
+        mBinding.memberVodRepo.setOnClickListener(v -> RepoListActivity.start((AppCompatActivity) requireActivity()));
         mBinding.memberVodHome.setOnClickListener(v -> SiteDialog.create(this).all().show());
         mBinding.memberDoh.setOnClickListener(v -> setDoh());
         mBinding.memberWallDefault.setOnClickListener(v -> setWallDefault());

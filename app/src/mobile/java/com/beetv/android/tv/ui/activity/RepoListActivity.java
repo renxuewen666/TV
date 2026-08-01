@@ -1,5 +1,6 @@
 package com.beetv.android.tv.ui.activity;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Toast;
@@ -12,7 +13,6 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import com.beetv.android.tv.R;
 import com.beetv.android.tv.Setting;
 import com.beetv.android.tv.api.config.BeeApi;
-import com.beetv.android.tv.bean.Config;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -25,9 +25,9 @@ public class RepoListActivity extends AppCompatActivity implements SwipeRefreshL
     private RecyclerView recyclerView;
     private SwipeRefreshLayout refreshLayout;
     private RepoAdapter adapter;
-    private List<Config> repoList;
+    private List<JsonObject> repoList;
 
-    public static void start(androidx.fragment.app.FragmentActivity activity) {
+    public static void start(AppCompatActivity activity) {
         activity.startActivity(new Intent(activity, RepoListActivity.class));
     }
 
@@ -45,7 +45,7 @@ public class RepoListActivity extends AppCompatActivity implements SwipeRefreshL
         recyclerView.setAdapter(adapter);
 
         refreshLayout.setOnRefreshListener(this);
-        refreshLayout.setColorSchemeResources(R.color.color_primary);
+        refreshLayout.setColorSchemeResources(R.color.primary);
 
         loadRepos();
     }
@@ -70,8 +70,7 @@ public class RepoListActivity extends AppCompatActivity implements SwipeRefreshL
                     return;
                 }
 
-                JsonObject data = resp.getAsJsonObject("data");
-                JsonArray repos = data.has("repos") ? data.getAsJsonArray("repos") : new JsonArray();
+                JsonArray repos = resp.has("data") ? resp.getAsJsonObject("data").getAsJsonArray("repos") : new JsonArray();
                 
                 repoList.clear();
                 for (JsonElement e : repos) {
@@ -81,7 +80,7 @@ public class RepoListActivity extends AppCompatActivity implements SwipeRefreshL
                     int status = repo.has("status") ? repo.get("status").getAsInt() : 1;
                     
                     if (status == 1 && !url.isEmpty()) {
-                        repoList.add(new Config(url, name, 0));
+                        repoList.add(repo);
                     }
                 }
 

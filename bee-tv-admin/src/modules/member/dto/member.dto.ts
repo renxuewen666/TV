@@ -1,4 +1,4 @@
-import { ArrayMaxSize, ArrayNotEmpty, IsArray, IsIn, IsInt, IsNumber, IsOptional, IsString } from 'class-validator';
+import { ArrayMaxSize, ArrayNotEmpty, IsArray, IsBoolean, IsIn, IsInt, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class CreateLevelDto {
   @IsString()
@@ -49,6 +49,9 @@ export class CreateMemberDto {
   @IsOptional() @IsString()
   nickname?: string;
 
+  @IsOptional() @IsString()
+  phone?: string;
+
   @IsOptional() @IsInt()
   levelId?: number;
 
@@ -77,6 +80,9 @@ export class UpdateMemberDto {
 
   @IsOptional() @IsString()
   nickname?: string;
+
+  @IsOptional() @IsString()
+  phone?: string;
 
   @IsOptional() @IsInt()
   levelId?: number;
@@ -149,4 +155,86 @@ export class UpdateMemberRuleDto {
 
   @IsOptional() @IsInt()
   sort?: number;
+}
+
+export class CreateMemberGroupDto {
+  @IsString()
+  name: string;
+
+  @IsOptional() @IsInt()
+  levelId?: number;
+
+  @IsNumber()
+  price: number;
+
+  @IsInt()
+  duration: number;
+
+  @IsOptional() @IsBoolean()
+  isPermanent?: boolean;
+
+  @IsOptional() @IsString()
+  description?: string;
+
+  @IsOptional() @IsNumber()
+  discount?: number;
+
+  @IsOptional() @IsInt()
+  dailyScore?: number;
+
+  @IsOptional() @IsInt()
+  status?: number;
+
+  @IsOptional() @IsInt()
+  sort?: number;
+
+  @IsOptional() @IsInt()
+  deviceLimit?: number;
+
+  @IsOptional() @IsString()
+  loginOverflowAction?: string;
+
+  @IsOptional() @IsInt()
+  level?: number;
+}
+
+export class UpdateMemberGroupDto {
+  @IsOptional() @IsString()
+  name?: string;
+
+  @IsOptional() @IsInt()
+  levelId?: number;
+
+  @IsOptional() @IsNumber()
+  price?: number;
+
+  @IsOptional() @IsInt()
+  duration?: number;
+
+  @IsOptional() @IsBoolean()
+  isPermanent?: boolean;
+
+  @IsOptional() @IsString()
+  description?: string;
+
+  @IsOptional() @IsNumber()
+  discount?: number;
+
+  @IsOptional() @IsInt()
+  dailyScore?: number;
+
+  @IsOptional() @IsInt()
+  status?: number;
+
+  @IsOptional() @IsInt()
+  sort?: number;
+
+  @IsOptional() @IsInt()
+  deviceLimit?: number;
+
+  @IsOptional() @IsString()
+  loginOverflowAction?: string;
+
+  @IsOptional() @IsInt()
+  level?: number;
 }
