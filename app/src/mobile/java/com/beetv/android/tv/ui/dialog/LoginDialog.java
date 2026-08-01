@@ -87,31 +87,37 @@ public class LoginDialog implements DialogInterface.OnDismissListener {
         String account = binding.account.getText().toString().trim();
         String password = binding.password.getText().toString().trim();
         if (account.isEmpty() || password.isEmpty()) {
-            showError("Please fill in all fields");
+            showError("请填写所有必填项");
             return;
         }
         setLoading(true);
         new Thread(() -> {
             try {
                 JsonObject data = BeeApi.get().login(account, password);
-                String token = data.get("token").getAsString();
+                String token = data.has("token") ? data.get("token").getAsString() : "";
                 JsonObject user = data.has("user") ? data.getAsJsonObject("user") : data;
-                String email = user.has("email") ? user.get("email").getAsString() : account;
-                String nickname = user.has("nickname") ? user.get("nickname").getAsString() : account;
-                int score = user.has("score") ? user.get("score").getAsInt() : 0;
-                Setting.putAuthToken(token);
+                String email = user.has("email") && !user.get("email").isJsonNull() ? user.get("email").getAsString() : account;
+                String nickname = user.has("nickname") && !user.get("nickname").isJsonNull() ? user.get("nickname").getAsString() : account;
+                int score = user.has("score") && !user.get("score").isJsonNull() ? user.get("score").getAsInt() : 0;
+                if (!token.isEmpty()) Setting.putAuthToken(token);
                 saveUserProfile(user, email, nickname, score);
                 BeeApi.get().syncVodConfig();
-                dialog.getOwnerActivity().runOnUiThread(() -> {
-                    setLoading(false);
-                    if (callback != null) callback.onLoginResult(email, nickname, score);
-                    dialog.dismiss();
-                });
+                FragmentActivity activity = dialog.getOwnerActivity();
+                if (activity != null) {
+                    activity.runOnUiThread(() -> {
+                        setLoading(false);
+                        if (callback != null) callback.onLoginResult(email, nickname, score);
+                        dialog.dismiss();
+                    });
+                }
             } catch (Exception e) {
-                dialog.getOwnerActivity().runOnUiThread(() -> {
-                    setLoading(false);
-                    showError(e.getMessage());
-                });
+                FragmentActivity activity = dialog.getOwnerActivity();
+                if (activity != null) {
+                    activity.runOnUiThread(() -> {
+                        setLoading(false);
+                        showError(e.getMessage() != null ? e.getMessage() : "登录失败");
+                    });
+                }
             }
         }).start();
     }
@@ -121,7 +127,7 @@ public class LoginDialog implements DialogInterface.OnDismissListener {
         String nickname = binding.nickname.getText().toString().trim();
         String password = binding.password.getText().toString().trim();
         if (email.isEmpty() || password.isEmpty()) {
-            showError("Please fill in all fields");
+            showError("请填写所有必填项");
             return;
         }
         final String registerEmail = email;
@@ -131,22 +137,28 @@ public class LoginDialog implements DialogInterface.OnDismissListener {
         new Thread(() -> {
             try {
                 JsonObject data = BeeApi.get().register(registerEmail, registerNickname, registerPassword);
-                String token = data.get("token").getAsString();
+                String token = data.has("token") ? data.get("token").getAsString() : "";
                 JsonObject user = data.has("user") ? data.getAsJsonObject("user") : data;
                 int score = user.has("score") ? user.get("score").getAsInt() : 0;
-                Setting.putAuthToken(token);
+                if (!token.isEmpty()) Setting.putAuthToken(token);
                 saveUserProfile(user, registerEmail, registerNickname, score);
                 BeeApi.get().syncVodConfig();
-                dialog.getOwnerActivity().runOnUiThread(() -> {
-                    setLoading(false);
-                    if (callback != null) callback.onLoginResult(registerEmail, registerNickname, score);
-                    dialog.dismiss();
-                });
+                FragmentActivity activity = dialog.getOwnerActivity();
+                if (activity != null) {
+                    activity.runOnUiThread(() -> {
+                        setLoading(false);
+                        if (callback != null) callback.onLoginResult(registerEmail, registerNickname, score);
+                        dialog.dismiss();
+                    });
+                }
             } catch (Exception e) {
-                dialog.getOwnerActivity().runOnUiThread(() -> {
-                    setLoading(false);
-                    showError(e.getMessage());
-                });
+                FragmentActivity activity = dialog.getOwnerActivity();
+                if (activity != null) {
+                    activity.runOnUiThread(() -> {
+                        setLoading(false);
+                        showError(e.getMessage() != null ? e.getMessage() : "注册失败");
+                    });
+                }
             }
         }).start();
     }

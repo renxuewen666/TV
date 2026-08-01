@@ -20,7 +20,7 @@ dependencyResolutionManagement {
 }
 include ':app'
 include ':catvod'
-include ':chaquo'
+// include ':chaquo'  // Temporarily excluded: requires Python 3.10
 include ':quickjs'
 include ':hook'
 rootProject.name = "BeeTV"

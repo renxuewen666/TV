@@ -227,4 +227,10 @@ public class BeeApi {
         body.addProperty("code", code);
         return postJsonGetData(base + "/member/activate", body);
     }
+
+    public JsonObject updateProfile(int userId, JsonObject profile) throws IOException {
+        String base = Setting.getAdminUrl();
+        String respBody = postJson(base + "/member/users/" + userId, profile);
+        return com.github.catvod.utils.Json.parse(respBody).getAsJsonObject();
+    }
 }

@@ -1,22 +1,23 @@
 package com.beetv.android.tv.api.loader;
 
 import com.beetv.android.tv.App;
-import com.beetv.chaquo.Loader;
 import com.github.catvod.crawler.Spider;
 import com.github.catvod.crawler.SpiderNull;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Python 爬虫加载器 - 临时桩实现
+ * 注：Chaquo 模块因 Python 3.10 依赖暂时被排除
+ */
 public class PyLoader {
 
     private final ConcurrentHashMap<String, Spider> spiders;
-    private final Loader loader;
     private String recent;
 
     public PyLoader() {
         spiders = new ConcurrentHashMap<>();
-        loader = new Loader();
     }
 
     public void clear() {
@@ -29,20 +30,11 @@ public class PyLoader {
     }
 
     public Spider getSpider(String key, String api, String ext) {
-        try {
-            if (spiders.containsKey(key)) return spiders.get(key);
-            Spider spider = loader.spider(api);
-            spider.siteKey = key;
-            spider.init(App.get(), ext);
-            spiders.put(key, spider);
-            return spider;
-        } catch (Throwable e) {
-            e.printStackTrace();
-            return new SpiderNull();
-        }
+        // Chaquo 不可用，返回空 Spider
+        return new SpiderNull();
     }
 
     public Object[] proxy(Map<String, String> params) throws Exception {
-        return spiders.get(recent).proxy(params);
+        return null;
     }
 }

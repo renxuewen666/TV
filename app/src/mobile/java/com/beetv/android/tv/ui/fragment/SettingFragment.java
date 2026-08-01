@@ -35,12 +35,14 @@ import com.beetv.android.tv.ui.activity.HistoryActivity;
 import com.beetv.android.tv.ui.activity.HomeActivity;
 import com.beetv.android.tv.ui.activity.KeepActivity;
 import com.beetv.android.tv.ui.activity.LiveActivity;
+import com.beetv.android.tv.ui.activity.RepoListActivity;
 import com.beetv.android.tv.ui.activity.ScanActivity;
 import com.beetv.android.tv.ui.base.BaseFragment;
 import com.beetv.android.tv.ui.dialog.HistoryDialog;
 import com.beetv.android.tv.ui.dialog.LoginDialog;
 import com.beetv.android.tv.ui.dialog.RestoreDialog;
 import com.beetv.android.tv.ui.dialog.SiteDialog;
+import com.beetv.android.tv.ui.dialog.UserCenterDialog;
 import com.beetv.android.tv.utils.FileUtil;
 import com.beetv.android.tv.utils.Notify;
 import com.beetv.android.tv.utils.PermissionUtil;
@@ -80,7 +82,13 @@ public class SettingFragment extends BaseFragment implements LoginDialog.LoginCa
 
     @Override
     protected void initEvent() {
-        mBinding.memberCard.setOnClickListener(v -> onMemberLogin());
+        mBinding.memberCard.setOnClickListener(v -> {
+            if (Setting.isLoggedIn()) {
+                UserCenterDialog.create(requireActivity()).show();
+            } else {
+                onMemberLogin();
+            }
+        });
         mBinding.memberLoginBtn.setOnClickListener(v -> onMemberLogin());
         mBinding.memberSigninTop.setOnClickListener(v -> onMemberSignin());
         mBinding.memberSignin.setOnClickListener(v -> onMemberSignin());
@@ -92,7 +100,7 @@ public class SettingFragment extends BaseFragment implements LoginDialog.LoginCa
         mBinding.memberKeep.setOnClickListener(v -> KeepActivity.start(requireActivity()));
         mBinding.memberPackages.setOnClickListener(v -> onPackages());
         mBinding.memberActivate.setOnClickListener(v -> onActivateCode());
-        mBinding.memberVodRepo.setOnClickListener(v -> HistoryDialog.create(this).type(0).show());
+        mBinding.memberVodRepo.setOnClickListener(v -> RepoListActivity.start(requireActivity()));
         mBinding.memberVodHome.setOnClickListener(v -> SiteDialog.create(this).all().show());
         mBinding.memberDoh.setOnClickListener(v -> setDoh());
         mBinding.memberWallDefault.setOnClickListener(v -> setWallDefault());
