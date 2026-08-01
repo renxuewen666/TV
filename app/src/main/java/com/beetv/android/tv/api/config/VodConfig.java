@@ -200,7 +200,14 @@ public class VodConfig {
     }
 
     private void initParse(Config config, JsonObject object) {
-        setParses(Json.safeListElement(object, "parses").stream().map(Parse::objectFrom).distinct().collect(Collectors.toCollection(ArrayList::new)));
+        List<Parse> items = Json.safeListElement(object, "parses").stream().map(Parse::objectFrom).collect(Collectors.toCollection(ArrayList::new));
+        // Direct repository URLs cannot inject the service-managed parses array.
+        // Merge UI6 init parses by name, preserving repository-specific lines first.
+        for (var element : Ui6Config.getParses()) {
+            Parse item = Parse.objectFrom(element);
+            if (!items.contains(item)) items.add(item);
+        }
+        setParses(items.stream().distinct().collect(Collectors.toCollection(ArrayList::new)));
         setParse(config, getParses().isEmpty() ? new Parse() : getParses().stream().filter(item -> item.getName().equals(config.getParse())).findFirst().orElse(getParses().get(0)), false);
     }
 
@@ -217,7 +224,7 @@ public class VodConfig {
     }
 
     private void setParses(List<Parse> parses) {
-        if (!parses.isEmpty()) parses.add(0, Parse.god());
+        // UI6 only exposes "超级解析" when it is explicitly configured by the repository.
         this.parses = parses;
     }
 

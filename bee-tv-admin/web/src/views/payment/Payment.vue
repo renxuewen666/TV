@@ -4,15 +4,15 @@
       <template #header>
         <div class="header-row">
           <div>
-            <span>支付订单</span>
-            <div class="desc">支付商户、接口地址与回调地址统一在“支付配置（易支付）”中维护。</div>
+            <span>支付基础配置</span>
+            <div class="desc">此处只维护全局回调和默认参数；具体易支付商户请在“支付配置（易支付）”中统一管理。</div>
           </div>
           <el-button @click="loadOrders(1)">刷新</el-button>
         </div>
       </template>
-      <el-alert type="info" :closable="false" show-icon style="margin-bottom:16px">
-        若使用易支付，请优先在“易支付”页面配置具体商户；这里保留接口地址、默认回调/返回地址等全局支付参数。
-      </el-alert>
+        <el-alert type="info" :closable="false" show-icon style="margin-bottom:16px">
+          实际收款商户、商户密钥和提交地址只在“支付配置（易支付）”页面维护，避免出现两套可用商户配置。
+        </el-alert>
       <el-form label-width="170px" class="config-form">
         <el-form-item v-for="item in configs" :key="item.key" :label="item.remark || item.key">
           <el-input v-model="item.value" :type="item.key.includes('key') ? 'password' : 'text'" show-password class="config-input" />
@@ -31,9 +31,10 @@
       <el-table :data="orders" border v-loading="loadingOrders">
         <el-table-column prop="orderNo" label="订单号" min-width="180" />
         <el-table-column prop="tradeNo" label="交易号" min-width="180" />
-        <el-table-column prop="userId" label="用户ID" width="120" />
-        <el-table-column prop="levelId" label="等级" width="90" />
-        <el-table-column prop="amount" label="金额" width="90" />
+        <el-table-column prop="userId" label="用户ID" width="100" />
+        <el-table-column label="用户" min-width="150"><template #default="{ row }">{{ row.user?.nickname || row.user?.email || '-' }}</template></el-table-column>
+        <el-table-column label="会员套餐" min-width="120"><template #default="{ row }">{{ row.levelName || `等级 ${row.levelId}` }}</template></el-table-column>
+        <el-table-column prop="amount" label="金额" width="90"><template #default="{ row }">¥{{ row.amount }}</template></el-table-column>
         <el-table-column prop="channel" label="渠道" width="100" />
         <el-table-column prop="payType" label="支付方式" width="100" />
         <el-table-column prop="status" label="状态" width="100">

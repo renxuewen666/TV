@@ -217,6 +217,54 @@
     <string name="setting_member_center">Member Center</string>
     <string name="setting_logout">Logout</string>
 
+    <!-- Member Center -->
+    <string name="mine_avatar_text">ME</string>
+    <string name="mine_login_title">Log in to your account</string>
+    <string name="mine_login_tip">Log in to unlock member services</string>
+    <string name="mine_guest_tip">Guest mode is active. Log in to sync your account, membership and points.</string>
+    <string name="mine_guest_level">Guest</string>
+    <string name="mine_member_level_value">Member level %1$d</string>
+    <string name="mine_member_expire_none">Membership has not been activated</string>
+    <string name="mine_member_expire_value">Expires: %1$s</string>
+    <string name="mine_balance_value">Balance: ¥%1$s</string>
+    <string name="mine_score_value">Points: %1$d</string>
+    <string name="mine_my_services">My Services</string>
+    <string name="mine_member_services">Member Services</string>
+    <string name="mine_common_settings">Common Settings</string>
+    <string name="mine_signin">Daily check-in</string>
+    <string name="mine_qr_login">TV QR login</string>
+    <string name="mine_notice">Messages</string>
+    <string name="mine_vip_time">Membership</string>
+    <string name="mine_member_expire">Expires</string>
+    <string name="mine_coupon">Coupons</string>
+    <string name="mine_balance">Balance</string>
+    <string name="mine_score">Points</string>
+    <string name="mine_signing_in">Checking in…</string>
+    <string name="mine_signin_success">Check-in successful</string>
+    <string name="mine_member_package">Membership packages</string>
+    <string name="mine_day_unit"> days</string>
+    <string name="mine_package_empty">No membership package is currently available.</string>
+    <string name="mine_activate_title">Redeem membership code</string>
+    <string name="mine_activate_hint">Enter membership code</string>
+    <string name="mine_activate">Redeem</string>
+    <string name="mine_activate_success">Redeemed successfully. Your membership has been refreshed.</string>
+    <string name="mine_app_settings">Personal settings</string>
+    <string name="mine_about">About</string>
+    <string name="mine_service">Customer service</string>
+    <string name="mine_service_tip">Customer service will be available in a future update.</string>
+    <string name="mine_mall_banner">Membership Store · Unlock more viewing benefits</string>
+    <string name="mine_vod_repo">Repositories</string>
+    <string name="mine_vod_home">Home data</string>
+    <string name="mine_wall_local">Local wallpaper</string>
+    <string name="mine_wall_network">Online wallpaper</string>
+    <string name="mine_version_update">Check for updates</string>
+    <string name="mine_clear_cache">Clear cache</string>
+    <string name="mine_doh_empty">No DoH is available from the current repository.</string>
+    <string name="mine_wall_refresh_success">Online wallpaper refreshed.</string>
+    <string name="mine_cache_cleared">Cache cleared.</string>
+    <string name="mine_version_message">蜜蜂影视\nVersion %1$s</string>
+    <string name="mine_logout_success">Logged out</string>
+
     <!-- Trial -->
     <string name="trial_title">Trial Mode</string>
     <string name="trial_message">You can continue browsing for free. Login to get full access and unlimited time.</string>

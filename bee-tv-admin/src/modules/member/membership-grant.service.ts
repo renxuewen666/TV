@@ -4,7 +4,7 @@ import { Prisma, PrismaClient } from '@prisma/client';
 const DAY_MS = 24 * 60 * 60 * 1000;
 const PERMANENT_DURATION_DAYS = 88888888;
 
-export type MembershipGrantSource = 'activation_code' | 'epay' | 'admin';
+export type MembershipGrantSource = 'activation_code' | 'epay' | 'admin' | 'balance' | 'score';
 
 @Injectable()
 export class MembershipGrantService {

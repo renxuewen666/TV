@@ -29,13 +29,14 @@ export class AppAuthService {
     if (!email) email = `${accountName.replace(/[^a-zA-Z0-9_-]/g, '') || 'user'}_${Date.now()}@local.bee-tv`;
 
     const existing = await this.prisma.appUser.findFirst({
-      where: { OR: [{ email }, { nickname: accountName }] },
+      where: { OR: [{ email }, { username: accountName }, { nickname: accountName }] },
     });
     if (existing) throw new ConflictException('账号已被注册');
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
     const user = await this.prisma.appUser.create({
       data: {
+        username: accountName,
         email,
         nickname: accountName,
         password: hashedPassword,
@@ -61,6 +62,7 @@ export class AppAuthService {
       const hashedPassword = await bcrypt.hash(`${safeId}_${Date.now()}`, 10);
       user = await this.prisma.appUser.create({
         data: {
+          username: `tv_${safeId}`,
           email,
           nickname: dto.nickname?.trim() || `TV用户${safeId.slice(-6)}`,
           password: hashedPassword,
@@ -77,6 +79,7 @@ export class AppAuthService {
       where: {
         OR: [
           { email: dto.account },
+          { username: dto.account },
           { nickname: dto.account },
         ],
       },
@@ -92,8 +95,13 @@ export class AppAuthService {
   private async resolveEnabledApp(appId?: string) {
     if (!appId || appId === 'default') return null;
     const app = await this.prisma.clientApp.findFirst({ where: { appId, status: 1 } });
-    if (!app) throw new BadRequestException('应用不存在或已停用');
-    return app;
+    if (app) return app;
+
+    // 首次部署尚未创建客户端应用时，允许客户端以默认全局策略注册；
+    // 一旦后台已配置任一应用，则必须使用已启用的 appId，避免错误应用绕过策略。
+    const configuredApps = await this.prisma.clientApp.count();
+    if (configuredApps === 0) return null;
+    throw new BadRequestException('应用不存在或已停用');
   }
 
   private resolvePolicy(policy: number | undefined, fallback: string) {
@@ -101,6 +109,7 @@ export class AppAuthService {
   }
 
   private async issueSession(user: any, appId: string, deviceId: string) {
+    if (!user || user.status !== 1) throw new UnauthorizedException('账号不存在或已禁用');
     const app = await this.prisma.clientApp.findFirst({ where: { appId, status: 1 } });
     const deviceLimit = app?.loginLimit || parseInt(await this.systemService.getValue('device_limit_count')) || 3;
     const deviceLimitMode = await this.systemService.getValue('device_limit_mode');
@@ -127,6 +136,7 @@ export class AppAuthService {
       token: this.jwtService.sign(payload, { expiresIn: `${hours}h` }),
       user: {
         id: user.id,
+        username: user.username,
         email: user.email,
         nickname: user.nickname,
         avatar: user.avatar,
@@ -144,6 +154,7 @@ export class AppAuthService {
     if (!user) throw new UnauthorizedException('用户不存在');
     return {
       id: user.id,
+      username: user.username,
       email: user.email,
       nickname: user.nickname,
       avatar: user.avatar,

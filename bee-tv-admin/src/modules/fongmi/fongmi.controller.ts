@@ -33,22 +33,22 @@ export class FongMiController {
   @Public()
   @RawResponse()
   @Get('main/init')
-  init(@Req() req: any, @Query('app_id') appId?: string, @Query('apk_mark') apkMark?: string, @Query('sign') sign?: string) {
-    return this.fongMiService.init({ appId, apkMark, sign, origin: `${req.protocol}://${req.get('host')}` });
+  init(@Req() req: any, @Headers('authorization') authorization?: string, @Headers('token') headerToken?: string, @Query('token') queryToken?: string, @Query('app_id') appId?: string, @Query('apk_mark') apkMark?: string, @Query('sign') sign?: string) {
+    return this.fongMiService.init({ appId, apkMark, sign, token: this.getToken(authorization, headerToken, queryToken), origin: this.getOrigin(req) });
   }
 
   @Public()
   @RawResponse()
   @Get('index/store')
-  store(@Query('id') id?: string, @Query('repoId') repoId?: string, @Query('appid') appId?: string) {
-    return this.fongMiService.getStoreProxy({ repoId: Number(id || repoId || 0) || undefined, appId });
+  store(@Req() req: any, @Headers('authorization') authorization?: string, @Headers('token') headerToken?: string, @Query('token') queryToken?: string, @Query('id') id?: string, @Query('repoId') repoId?: string, @Query('appid') appId?: string) {
+    return this.fongMiService.getStoreProxy({ repoId: Number(id || repoId || 0) || undefined, appId, token: this.getToken(authorization, headerToken, queryToken), origin: this.getOrigin(req) });
   }
 
   @Public()
   @RawResponse()
-  @Get('index/index')
-  parse(@Query('videoUrl') videoUrl: string, @Query('parsesId') parsesId?: string) {
-    return this.fongMiService.getParseProxy(videoUrl, Number(parsesId || 0) || undefined);
+  @Get(['index', 'index/index'])
+  parse(@Query('videoUrl') videoUrl: string, @Headers('authorization') authorization?: string, @Headers('token') headerToken?: string, @Query('token') queryToken?: string, @Query('parsesId') parsesId?: string, @Query('appid') appId?: string) {
+    return this.fongMiService.getParseProxy(videoUrl, Number(parsesId || 0) || undefined, this.getToken(authorization, headerToken, queryToken), appId);
   }
 
   @Public()
@@ -86,6 +86,16 @@ export class FongMiController {
   @Get('update/app')
   legacyUpdate(@Query('app_id') appId?: string, @Query('apk_mark') apkMark?: string, @Query('sign') sign?: string) {
     return this.fongMiService.legacyUpdate({ appId, apkMark, sign });
+  }
+
+  private getOrigin(req: any) {
+    const protocol = String(req.headers?.['x-forwarded-proto'] || req.protocol || 'https').split(',')[0].trim();
+    const host = String(req.headers?.['x-forwarded-host'] || req.get('host') || '').split(',')[0].trim();
+    return `${protocol}://${host}`;
+  }
+
+  private getToken(authorization?: string, headerToken?: string, queryToken?: string) {
+    return queryToken || headerToken || authorization?.replace(/^Bearer\s+/i, '') || '';
   }
 
   private legacyBody(body: any) {

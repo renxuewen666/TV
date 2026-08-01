@@ -10,15 +10,23 @@
 
     <el-card v-if="tab === 'users'">
       <template #header>
-        <div class="toolbar"><span>会员管理</span><el-button @click="loadMembers">刷新</el-button></div>
+        <div class="member-toolbar">
+          <div class="toolbar"><span>会员管理</span><div><el-button type="primary" @click="openMember()">添加会员</el-button><el-button type="danger" :disabled="!selectedMembers.length" @click="openMemberBatch">批量操作</el-button><el-button @click="loadMembers">刷新</el-button></div></div>
+          <el-form inline class="member-filter"><el-form-item label="关键词"><el-input v-model="memberKeyword" clearable placeholder="用户名、昵称或邮箱" @keyup.enter="loadMembers(1)" /></el-form-item><el-form-item label="状态"><el-select v-model="memberStatus" clearable placeholder="全部"><el-option label="正常" value="1" /><el-option label="禁用" value="0" /></el-select></el-form-item><el-button type="primary" @click="loadMembers(1)">查询</el-button><el-button @click="resetMemberFilter">重置</el-button></el-form>
+        </div>
       </template>
-      <el-table :data="members" border>
-        <el-table-column prop="userId" label="用户ID" min-width="140" />
-        <el-table-column label="等级" width="120"><template #default="{row}">{{ row.level?.name || row.levelId }}</template></el-table-column>
+      <el-table :data="members" border @selection-change="handleMemberSelectionChange">
+        <el-table-column type="selection" width="50" />
+        <el-table-column prop="userId" label="用户ID" width="90" />
+        <el-table-column prop="username" label="用户名" min-width="130" />
+        <el-table-column prop="nickname" label="昵称" min-width="130" />
+        <el-table-column prop="email" label="邮箱" min-width="180" show-overflow-tooltip />
+        <el-table-column label="会员套餐" width="130"><template #default="{row}">{{ row.level?.name || (row.levelId ? `等级 ${row.levelId}` : '普通用户') }}</template></el-table-column>
         <el-table-column prop="score" label="积分" width="90" />
         <el-table-column prop="balance" label="余额" width="100" />
         <el-table-column label="状态" width="90"><template #default="{row}"><el-tag :type="row.status ? 'success' : 'danger'">{{ row.status ? '正常' : '禁用' }}</el-tag></template></el-table-column>
         <el-table-column prop="expireAt" label="到期时间" width="180" />
+        <el-table-column prop="createdAt" label="注册时间" width="180" />
         <el-table-column label="操作" width="220" fixed="right">
           <template #default="{row}">
             <el-button size="small" @click="openMember(row)">编辑</el-button>
@@ -108,14 +116,29 @@
       </el-form>
     </el-card>
 
-    <el-dialog v-model="memberVisible" title="编辑会员" width="480px">
-      <el-form :model="memberForm" label-width="90px">
-        <el-form-item label="会员等级"><el-select v-model="memberForm.levelId"><el-option v-for="l in levels" :key="l.id" :label="l.name" :value="l.id" /></el-select></el-form-item>
+    <el-dialog v-model="memberVisible" :title="memberForm.id ? '编辑会员' : '添加会员'" width="520px">
+      <el-form :model="memberForm" label-width="100px">
+        <el-form-item label="用户名" :required="!memberForm.id"><el-input v-model="memberForm.username" placeholder="用于登录，至少2个字符；历史账号可留空" /></el-form-item>
+        <el-form-item label="昵称"><el-input v-model="memberForm.nickname" placeholder="页面展示名称" /></el-form-item>
+        <el-form-item label="邮箱"><el-input v-model="memberForm.email" placeholder="留空时生成内部邮箱" /></el-form-item>
+        <el-form-item :label="memberForm.id ? '新密码' : '登录密码'" :required="!memberForm.id"><el-input v-model="memberForm.password" type="password" show-password :placeholder="memberForm.id ? '留空则不修改密码' : '至少6个字符'" /></el-form-item>
+        <el-form-item label="会员套餐"><el-select v-model="memberForm.levelId"><el-option label="普通用户" :value="0" /><el-option v-for="l in levels" :key="l.id" :label="l.name" :value="l.id" /></el-select></el-form-item>
+        <el-form-item label="授权说明"><el-input v-model="memberForm.remark" placeholder="后台授予/调整的原因" /></el-form-item>
         <el-form-item label="积分"><el-input-number v-model="memberForm.score" :min="0" /></el-form-item>
         <el-form-item label="余额"><el-input-number v-model="memberForm.balance" :min="0" :step="1" /></el-form-item>
         <el-form-item label="状态"><el-switch v-model="memberForm.status" :active-value="1" :inactive-value="0" /></el-form-item>
       </el-form>
       <template #footer><el-button @click="memberVisible=false">取消</el-button><el-button type="primary" @click="saveMember">保存</el-button></template>
+    </el-dialog>
+
+    <el-dialog v-model="memberBatchVisible" title="批量操作会员" width="460px">
+      <el-alert :closable="false" type="warning" show-icon style="margin-bottom:14px">将操作已选中的 {{ selectedMembers.length }} 位会员；删除采用软删除（禁用账号），且会立即使设备登录失效。</el-alert>
+      <el-form :model="memberBatchForm" label-width="90px">
+        <el-form-item label="操作"><el-select v-model="memberBatchForm.action"><el-option label="启用会员" value="enable" /><el-option label="禁用会员" value="disable" /><el-option label="删除会员" value="delete" /><el-option label="设置会员套餐" value="setLevel" /></el-select></el-form-item>
+        <el-form-item v-if="memberBatchForm.action === 'setLevel'" label="会员套餐"><el-select v-model="memberBatchForm.levelId"><el-option v-for="l in levels" :key="l.id" :label="l.name" :value="l.id" /></el-select></el-form-item>
+        <el-form-item label="操作说明"><el-input v-model="memberBatchForm.remark" placeholder="批量授权时写入记录" /></el-form-item>
+      </el-form>
+      <template #footer><el-button @click="memberBatchVisible=false">取消</el-button><el-button type="primary" @click="submitMemberBatch">确认操作</el-button></template>
     </el-dialog>
 
     <el-dialog v-model="groupVisible" title="会员套餐" width="520px">
@@ -125,6 +148,7 @@
         <el-form-item label="永久会员"><el-switch v-model="groupForm.isPermanent" /></el-form-item>
         <el-form-item v-if="!groupForm.isPermanent" label="会员时长"><el-input-number v-model="groupForm.duration" :min="1" :step="1" /><span class="field-suffix">天</span></el-form-item>
         <el-form-item label="套餐说明"><el-input v-model="groupForm.description" type="textarea" :rows="3" /></el-form-item>
+        <el-form-item label="购买折扣"><el-input-number v-model="groupForm.discount" :min="0.01" :max="1" :precision="2" :step="0.05" /><span class="field-suffix">1 = 原价</span></el-form-item>
         <el-form-item label="每日积分"><el-input-number v-model="groupForm.dailyScore" :min="0" /></el-form-item>
         <el-form-item label="排序"><el-input-number v-model="groupForm.sort" :min="0" /></el-form-item>
         <el-form-item label="可购买"><el-switch v-model="groupForm.status" :active-value="1" :inactive-value="0" /></el-form-item>
@@ -183,9 +207,14 @@ const balanceLogs = ref<any[]>([])
 const scoreLogs = ref<any[]>([])
 const codes = ref<any[]>([])
 const selectedCodes = ref<number[]>([])
+const selectedMembers = ref<number[]>([])
+const memberKeyword = ref('')
+const memberStatus = ref<string | undefined>()
 
 const memberVisible = ref(false)
+const memberBatchVisible = ref(false)
 const memberForm = ref<any>({})
+const memberBatchForm = ref<any>({ action: 'enable', levelId: undefined, remark: '' })
 const groupVisible = ref(false)
 const groupForm = ref<any>({})
 const ruleVisible = ref(false)
@@ -201,7 +230,7 @@ const loadBase = async () => {
   levels.value = res.data || []
   if (!codeForm.value.levelId && levels.value[0]) codeForm.value.levelId = levels.value[0].id
 }
-const loadMembers = async (page = 1) => { const res: any = await memberApi.getMembers({ page, size: 20 }); members.value = res.data?.list || []; memberTotal.value = res.data?.total || 0 }
+const loadMembers = async (page = 1) => { const res: any = await memberApi.getMembers({ page, size: 20, keyword: memberKeyword.value || undefined, status: memberStatus.value }); members.value = res.data?.list || []; memberTotal.value = res.data?.total || 0 }
 const loadGroups = async () => { const res: any = await memberApi.getGroups({ page: 1, size: 100 }); groups.value = res.data?.list || res.data || [] }
 const loadRules = async () => { const res: any = await memberApi.getRules({ page: 1, size: 100 }); rules.value = res.data?.list || [] }
 const loadBalanceLogs = async () => { const res: any = await memberApi.getBalanceLogs({ page: 1, size: 100 }); balanceLogs.value = res.data?.list || [] }
@@ -221,11 +250,27 @@ const loadCurrent = async () => {
 onMounted(loadCurrent)
 watch(tab, loadCurrent)
 
-const openMember = (row: any) => { memberForm.value = { ...row }; memberVisible.value = true }
-const saveMember = async () => { await memberApi.updateMember(memberForm.value.id, { levelId: memberForm.value.levelId, score: memberForm.value.score, balance: memberForm.value.balance, status: memberForm.value.status }); ElMessage.success('保存成功'); memberVisible.value = false; loadMembers() }
-const deleteMember = async (id: number) => { await ElMessageBox.confirm('确认删除该会员？', '提示', { type: 'warning' }); await memberApi.deleteMember(id); ElMessage.success('删除成功'); loadMembers() }
+const openMember = (row?: any) => { memberForm.value = row ? { ...row, password: '', remark: '' } : { username: '', nickname: '', email: '', password: '', levelId: 0, score: 0, balance: 0, status: 1, remark: '' }; memberVisible.value = true }
+const saveMember = async () => {
+  if (!memberForm.value.id && !memberForm.value.username?.trim()) return ElMessage.warning('请输入用户名')
+  if (!memberForm.value.id && !memberForm.value.password) return ElMessage.warning('请输入登录密码')
+  if (memberForm.value.id) await memberApi.updateMember(memberForm.value.id, memberForm.value)
+  else await memberApi.createMember(memberForm.value)
+  ElMessage.success('保存成功'); memberVisible.value = false; loadMembers()
+}
+const deleteMember = async (id: number) => { await ElMessageBox.confirm('删除后该会员将被禁用，且所有设备登录立即失效。确认继续？', '确认删除', { type: 'warning' }); await memberApi.deleteMember(id); ElMessage.success('删除成功'); loadMembers() }
+const handleMemberSelectionChange = (rows: any[]) => { selectedMembers.value = rows.map(row => row.id) }
+const resetMemberFilter = () => { memberKeyword.value = ''; memberStatus.value = undefined; loadMembers(1) }
+const openMemberBatch = () => { memberBatchForm.value = { action: 'enable', levelId: undefined, remark: '' }; memberBatchVisible.value = true }
+const submitMemberBatch = async () => {
+  if (memberBatchForm.value.action === 'setLevel' && !memberBatchForm.value.levelId) return ElMessage.warning('请选择会员套餐')
+  const actionName: Record<string, string> = { enable: '启用', disable: '禁用', delete: '删除', setLevel: '设置套餐' }
+  await ElMessageBox.confirm(`确认${actionName[memberBatchForm.value.action]}选中的 ${selectedMembers.value.length} 位会员？`, '批量操作确认', { type: 'warning' })
+  await memberApi.batchUpdateMembers({ ids: selectedMembers.value, ...memberBatchForm.value })
+  ElMessage.success('批量操作成功'); memberBatchVisible.value = false; loadMembers()
+}
 
-const openGroupDialog = (row?: any) => { groupForm.value = row ? { ...row } : { name: '', price: 0, duration: 30, isPermanent: false, description: '', dailyScore: 0, status: 1, sort: 0 }; groupVisible.value = true }
+const openGroupDialog = (row?: any) => { groupForm.value = row ? { ...row, discount: row.discount ?? 1 } : { name: '', price: 0, duration: 30, isPermanent: false, description: '', discount: 1, dailyScore: 0, status: 1, sort: 0 }; groupVisible.value = true }
 const saveGroup = async () => { if (groupForm.value.id) await memberApi.updateGroup(groupForm.value.id, groupForm.value); else await memberApi.createGroup(groupForm.value); ElMessage.success('保存成功'); groupVisible.value = false; loadGroups() }
 const delGroup = async (id: number) => { await ElMessageBox.confirm('确认删除该分组？', '提示', { type: 'warning' }); await memberApi.removeGroup(id); ElMessage.success('删除成功'); loadGroups() }
 
@@ -248,5 +293,7 @@ const submitRecharge = async () => { if (!rechargeForm.value.userId) return ElMe
 .page-header h3 { margin: 0; font-size: 18px; }
 .page-header p { margin: 6px 0 0; color: #909399; font-size: 13px; }
 .toolbar { display: flex; justify-content: space-between; align-items: center; }
+.member-toolbar { display: flex; flex-direction: column; gap: 12px; }
+.member-filter { margin: 0; }
 .field-suffix { margin-left: 8px; color: #606266; }
 </style>

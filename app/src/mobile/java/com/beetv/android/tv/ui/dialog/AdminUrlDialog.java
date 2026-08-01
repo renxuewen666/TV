@@ -22,11 +22,15 @@ public class AdminUrlDialog implements DialogInterface.OnDismissListener {
     private final AlertDialog dialog;
 
     public static AdminUrlDialog create(FragmentActivity activity) {
-        return new AdminUrlDialog(activity);
+        return new AdminUrlDialog(activity, (AdminUrlCallback) activity);
     }
 
-    public AdminUrlDialog(FragmentActivity activity) {
-        this.callback = (AdminUrlCallback) activity;
+    public static AdminUrlDialog create(FragmentActivity activity, AdminUrlCallback callback) {
+        return new AdminUrlDialog(activity, callback);
+    }
+
+    public AdminUrlDialog(FragmentActivity activity, AdminUrlCallback callback) {
+        this.callback = callback;
         this.binding = DialogAdminUrlBinding.inflate(LayoutInflater.from(activity));
         this.dialog = new MaterialAlertDialogBuilder(activity).setView(binding.getRoot()).create();
     }

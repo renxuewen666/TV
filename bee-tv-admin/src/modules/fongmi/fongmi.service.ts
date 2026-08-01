@@ -57,82 +57,92 @@ export class FongMiService {
     return { success: true };
   }
 
-  async init(params: { appId?: string; apkMark?: string; sign?: string; origin: string }) {
+  async init(params: { appId?: string; apkMark?: string; sign?: string; token?: string; origin: string }) {
     const app = await this.resolveApp(params.appId, params.apkMark, params.sign, false);
+    const access = await this.resolveAccess(params.token, app?.appId);
     const config = await this.appConfigService.getAppConfig(app?.appId);
     const system = await this.systemValues();
     const version = await this.prisma.appVersion.findFirst({
       where: { status: 1, ...(app ? { channel: app.appId } : {}) },
       orderBy: { versionCode: 'desc' },
     }) || config.version;
+    const tokenQuery = params.token ? `&token=${encodeURIComponent(params.token)}` : '';
+    const repos = this.filterByMemberLevel(config.repos, access.memberLevel);
+    const parses = this.filterByMemberLevel(config.apiEndpoints.filter((endpoint: any) => endpoint.type === 3), access.memberLevel);
 
     const data = {
       siteConfig: {
         name: system.site_name || '蜜蜂影视',
-        live_api: system.live_default_api || '',
-        epg_api: system.epg_token_api || '',
-        hot_search_api: '',
-        depot_site_hide: system.depot_site_hide || '',
-        depot_class_hide: system.depot_class_hide || '',
-        depot_parses_hide: system.depot_parses_hide || '',
-        maccms_key: system.maccms_key || '',
-        qweather_key: system.weather_api_key || '',
-        default_player: this.ui6Player(system.default_player),
-        custom_depot: this.ui6CustomRepo(system.custom_repo_mode),
-        resource_renaming: this.sourceRenameAsPipe(system.source_rename_config || '{}'),
-        service_qq: system.service_contact || '',
-        pay_type_list: [],
-        app_config: app ? this.clientAppDto(app) : this.emptyAppConfig(),
+        live_api: system.live_default_api || '', epg_api: system.epg_token_api || '', hot_search_api: '',
+        depot_site_hide: system.depot_site_hide || '', depot_class_hide: system.depot_class_hide || '', depot_parses_hide: system.depot_parses_hide || '',
+        maccms_key: system.maccms_key || '', qweather_key: system.weather_api_key || '', default_player: this.ui6Player(system.default_player),
+        custom_depot: this.ui6CustomRepo(system.custom_repo_mode), resource_renaming: this.sourceRenameAsPipe(system.source_rename_config || '{}'),
+        service_qq: system.service_contact || '', pay_type_list: [], app_config: app ? this.clientAppDto(app) : this.emptyAppConfig(),
       },
-      noticeList: config.notices.map((item: any) => ({
-        id: item.id, title: item.title, content: item.content, updatetime: Math.floor(new Date().getTime() / 1000), status: 'normal', weigh: 0,
+      member: { levelId: access.memberLevel, vip: access.memberLevel > 0, expireAt: access.expireAt ? Math.floor(access.expireAt.getTime() / 1000) : 0 },
+      noticeList: config.notices.map((item: any) => ({ id: item.id, title: item.title, content: item.content, updatetime: Math.floor(Date.now() / 1000), status: 'normal', weigh: 0 })),
+      homeConfig: config.advertisements.map((item: any) => ({ id: item.id, title: item.title, subtitle: '', parameter: item.link ? `web===${item.link}` : '', blurbcontent: '', coverimage: item.image, status: 'normal', weigh: item.sort })),
+      depotConfig: repos.map((repo: any) => ({
+        id: repo.id, name: repo.name, url: repo.url,
+        status: 'normal', status_text: 'normal', weigh: repo.priority,
       })),
-      homeConfig: config.advertisements.map((item: any) => ({
-        id: item.id, title: item.title, subtitle: '', parameter: item.link ? `web===${item.link}` : '', blurbcontent: '', coverimage: item.image, status: 'normal', weigh: item.sort,
-      })),
-      depotConfig: config.repos.map((repo: any) => ({
-        id: repo.id, name: repo.name, url: `${params.origin}/api/index/store?id=${repo.id}&appid=${encodeURIComponent(app?.appId || '')}`, status: 'normal', status_text: 'normal', weigh: repo.priority,
-      })),
-      parsesConfig: config.apiEndpoints.map((endpoint: any) => ({
-        id: endpoint.id, name: endpoint.name, url: endpoint.url, ext: '', type: String(endpoint.type), status: 'normal', weigh: 0,
+      parsesConfig: parses.map((endpoint: any) => ({
+        id: endpoint.id, name: endpoint.name,
+        url: `${params.origin}/api/index?parsesId=${endpoint.id}&appid=${encodeURIComponent(app?.appId || '')}${tokenQuery}&videoUrl=`,
+        ext: this.parseExt(endpoint.remark), type: '1', status: 'normal', status_text: 'normal', weigh: endpoint.priority,
       })),
       version: version ? this.versionDto(version) : null,
     };
     return this.envelope(data);
   }
 
-  async getStoreProxy(params: { repoId?: number; appId?: string }) {
+  async getStoreProxy(params: { repoId?: number; appId?: string; token?: string; origin: string }) {
+    const access = await this.resolveAccess(params.token, params.appId);
     let repo: any;
     if (params.repoId) repo = await this.prisma.repoSource.findFirst({ where: { id: params.repoId, status: 1 } });
-    if (!repo) repo = await this.prisma.repoSource.findFirst({ where: { status: 1 }, orderBy: { priority: 'desc' } });
+    if (!repo) repo = await this.prisma.repoSource.findFirst({ where: { status: 1, minMemberLevel: { lte: access.memberLevel } }, orderBy: [{ isDefault: 'desc' }, { priority: 'desc' }, { id: 'asc' }] });
     if (!repo) throw new NotFoundException('没有可用仓库');
+    if (repo.minMemberLevel > access.memberLevel) throw new UnauthorizedException('当前会员等级无权访问该仓库');
     const source = await this.fetchJson(repo.url);
-    const data = this.injectLiveConfig(source, await this.systemService.getValue('live_default_api'), await this.systemService.getValue('epg_token_api'));
+    const parseEndpoints = await this.prisma.apiEndpoint.findMany({
+      where: { type: 3, status: 1, minMemberLevel: { lte: access.memberLevel } },
+      orderBy: [{ isDefault: 'desc' }, { priority: 'desc' }, { id: 'asc' }],
+    });
+    const tokenQuery = params.token ? `&token=${encodeURIComponent(params.token)}` : '';
+    const parses = parseEndpoints.map(endpoint => ({
+      name: endpoint.name,
+      type: 1,
+      url: `${params.origin}/api/index/index?parsesId=${endpoint.id}&appid=${encodeURIComponent(params.appId || '')}${tokenQuery}&videoUrl=`,
+      ext: this.parseExt(endpoint.remark),
+    }));
+    const withParses = { ...(source || {}), ...(parses.length ? { parses } : {}) };
+    const data = this.injectLiveConfig(withParses, await this.systemService.getValue('live_default_api'), await this.systemService.getValue('epg_token_api'));
     return `lvDou+${this.encryptJson(data)}`;
   }
 
-  async getParseProxy(videoUrl: string, parsesId?: number) {
+  async getParseProxy(videoUrl: string, parsesId?: number, token?: string, appId?: string) {
     if (!videoUrl || !/^https?:\/\//i.test(videoUrl)) throw new BadRequestException('videoUrl必须是http或https URL');
-    const endpoint = parsesId ? await this.prisma.apiEndpoint.findFirst({ where: { id: parsesId, status: 1 } }) : null;
-    if (!endpoint) throw new NotFoundException('视频解析接口不存在或已停用');
-    const target = endpoint.url.includes('{url}')
-      ? endpoint.url.replace('{url}', encodeURIComponent(videoUrl))
-      : `${endpoint.url}${endpoint.url.includes('?') ? '&' : '?'}url=${encodeURIComponent(videoUrl)}`;
+    const access = await this.resolveAccess(token, appId);
+    const endpoint = parsesId ? await this.prisma.apiEndpoint.findFirst({ where: { id: parsesId, type: 3, status: 1 } }) : null;
+    if (!endpoint) throw new NotFoundException('播放解析线路不存在或已停用');
+    if (endpoint.minMemberLevel > access.memberLevel) throw new UnauthorizedException('当前会员等级无权使用该解析线路');
+    const target = endpoint.url.includes('{url}') ? endpoint.url.replace('{url}', encodeURIComponent(videoUrl)) : `${endpoint.url}${endpoint.url.includes('?') ? '&' : '?'}url=${encodeURIComponent(videoUrl)}`;
     const response = await fetch(target, { signal: AbortSignal.timeout(15000), headers: { 'User-Agent': 'BeeTV-FongMi/1.0' } });
     if (!response.ok) throw new BadRequestException(`解析请求失败 HTTP ${response.status}`);
     let payload: any;
     try { payload = JSON.parse(await response.text()); } catch { throw new BadRequestException('解析接口未返回JSON'); }
     const parsedUrl = payload?.url || payload?.data?.url;
     if (!parsedUrl || typeof parsedUrl !== 'string') throw new BadRequestException('解析接口未返回可播放url');
-    const encryptedUrl = `https://baidu.con/${this.encryptJson(parsedUrl)}`;
-    if (payload.data?.url) payload.data.url = encryptedUrl; else payload.url = encryptedUrl;
+    // Android ParseJob consumes UI6-compatible JSON directly. Do not replace the
+    // media URL with an opaque placeholder here: that bypasses the player's normal
+    // header handling and makes a successfully parsed URL unplayable.
     return payload;
   }
 
   async legacyLogin(dto: { account?: string; password?: string; appId?: string; apkMark?: string; mark?: string; sign?: string }) {
     const app = await this.resolveApp(dto.appId, dto.apkMark, dto.sign, true);
     if (!dto.account || !dto.password) throw new BadRequestException('账号和密码不能为空');
-    const user = await this.prisma.appUser.findFirst({ where: { OR: [{ email: dto.account }, { nickname: dto.account }] } });
+    const user = await this.prisma.appUser.findFirst({ where: { OR: [{ email: dto.account }, { username: dto.account }, { nickname: dto.account }] } });
     if (!user || user.status !== 1 || !(await bcrypt.compare(dto.password, user.password))) throw new UnauthorizedException('账号或密码错误');
     return this.envelope({ userinfo: await this.issueLegacySession(user, app, dto.mark || dto.apkMark || '') });
   }
@@ -143,13 +153,13 @@ export class FongMiService {
     if (!registerEnabled) throw new BadRequestException('当前应用已关闭用户注册');
     const username = String(dto.username || '').trim();
     if (!username || !dto.password || dto.password.length < 6) throw new BadRequestException('用户名不能为空且密码至少6位');
-    const existing = await this.prisma.appUser.findFirst({ where: { nickname: username } });
+    const existing = await this.prisma.appUser.findFirst({ where: { OR: [{ username }, { nickname: username }] } });
     if (existing) throw new BadRequestException('账号已被注册');
     const email = `${username.replace(/[^a-zA-Z0-9_-]/g, '') || 'user'}_${Date.now()}@local.bee-tv`;
     const bonusDays = parseInt(await this.systemService.getValue('reg_bonus_member')) || 0;
     const user = await this.prisma.appUser.create({
       data: {
-        email, nickname: username, password: await bcrypt.hash(dto.password, 10),
+        username, email, nickname: username, password: await bcrypt.hash(dto.password, 10),
         score: parseInt(await this.systemService.getValue('reg_bonus_score')) || 0,
         memberExpireAt: bonusDays > 0 ? new Date(Date.now() + bonusDays * 86400000) : null,
       },
@@ -243,6 +253,35 @@ export class FongMiService {
     return user;
   }
 
+  private async resolveAccess(token?: string, expectedAppId?: string) {
+    if (!token) return { memberLevel: 0, expireAt: null as Date | null };
+    try {
+      const session = await this.getLegacySession(token);
+      if (expectedAppId && session.appId !== expectedAppId) return { memberLevel: 0, expireAt: null as Date | null };
+      const user = await this.prisma.appUser.findUnique({ where: { id: session.userId } });
+      if (!user || user.status !== 1 || !user.memberExpireAt || user.memberExpireAt <= new Date()) return { memberLevel: 0, expireAt: null as Date | null };
+      return { memberLevel: Math.max(0, user.memberLevel || 0), expireAt: user.memberExpireAt };
+    } catch {
+      return { memberLevel: 0, expireAt: null as Date | null };
+    }
+  }
+
+  private filterByMemberLevel<T extends { minMemberLevel?: number; isDefault?: boolean; priority?: number; id?: number }>(items: T[], memberLevel: number) {
+    return items
+      .filter(item => Number(item.minMemberLevel || 0) <= memberLevel)
+      .sort((a, b) => Number(b.isDefault) - Number(a.isDefault) || Number(b.priority || 0) - Number(a.priority || 0) || Number(a.id || 0) - Number(b.id || 0));
+  }
+
+  private parseExt(remark?: string) {
+    if (!remark) return {};
+    try {
+      const ext = JSON.parse(remark);
+      return ext && typeof ext === 'object' && !Array.isArray(ext) ? ext : {};
+    } catch {
+      return {};
+    }
+  }
+
   private async systemValues() {
     const rows = await this.prisma.systemConfig.findMany();
     return Object.fromEntries(rows.map(row => [row.key, row.value])) as Record<string, string>;
@@ -322,7 +361,11 @@ export class FongMiService {
   private async fetchJson(url: string) {
     if (!/^https?:\/\//i.test(url)) throw new BadRequestException('仓库地址必须是http或https URL');
     const response = await fetch(url, { signal: AbortSignal.timeout(15000), headers: { 'User-Agent': 'BeeTV-FongMi/1.0' } });
+    const body = await response.text();
     if (!response.ok) throw new BadRequestException(`仓库请求失败 HTTP ${response.status}`);
-    try { return JSON.parse(await response.text()); } catch { throw new BadRequestException('仓库内容不是有效JSON'); }
+    try { return JSON.parse(body); } catch {
+      const preview = body.replace(/\s+/g, ' ').slice(0, 80);
+      throw new BadRequestException(`仓库内容不是有效JSON${preview ? `：${preview}` : ''}`);
+    }
   }
 }

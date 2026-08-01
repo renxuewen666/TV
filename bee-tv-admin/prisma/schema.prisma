@@ -205,25 +205,35 @@ model Notice {
 }
 
 model ApiEndpoint {
-  id        Int      @id @default(autoincrement())
-  name      String
-  type      Int
-  url       String
-  remark    String   @default("")
-  status    Int      @default(1)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             Int      @id @default(autoincrement())
+  name           String
+  // 0=点播，1=直播，2=壁纸，3=播放解析
+  type           Int
+  url            String
+  remark         String   @default("")
+  minMemberLevel Int      @default(0)
+  priority       Int      @default(0)
+  isDefault      Boolean  @default(false)
+  status         Int      @default(1)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([type, status, minMemberLevel, isDefault, priority])
 }
 
 model RepoSource {
-  id        Int      @id @default(autoincrement())
-  name      String
-  url       String   @unique
-  type      Int
-  priority  Int      @default(0)
-  status    Int      @default(1)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             Int      @id @default(autoincrement())
+  name           String
+  url            String   @unique
+  type           Int
+  priority       Int      @default(0)
+  minMemberLevel Int      @default(0)
+  isDefault      Boolean  @default(false)
+  status         Int      @default(1)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([status, minMemberLevel, isDefault, priority])
 }
 
 model HomeLayout {
@@ -290,6 +300,7 @@ model ClientApp {
 
 model AppUser {
   id        Int      @id @default(autoincrement())
+  username  String   @default("")
   email     String   @unique
   password  String
   nickname  String

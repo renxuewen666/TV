@@ -8,26 +8,38 @@ export class ApiManageService {
   async findAll(type?: number) {
     const where: any = {};
     if (type !== undefined) where.type = type;
-    return this.prisma.apiEndpoint.findMany({ where, orderBy: { createdAt: 'desc' } });
+    return this.prisma.apiEndpoint.findMany({ where, orderBy: [{ type: 'asc' }, { isDefault: 'desc' }, { priority: 'desc' }, { id: 'asc' }] });
   }
 
-  async create(data: { name: string; type: number; url: string; remark?: string }) {
-    return this.prisma.apiEndpoint.create({ data });
+  async create(data: { name: string; type: number; url: string; remark?: string; minMemberLevel?: number; priority?: number; isDefault?: boolean; status?: number }) {
+    return this.prisma.apiEndpoint.create({ data: this.normalizeAccess(data) as any });
   }
 
-  async update(id: number, data: { name?: string; url?: string; remark?: string; status?: number }) {
-    return this.prisma.apiEndpoint.update({ where: { id }, data });
+  async update(id: number, data: { name?: string; type?: number; url?: string; remark?: string; minMemberLevel?: number; priority?: number; isDefault?: boolean; status?: number }) {
+    return this.prisma.apiEndpoint.update({ where: { id }, data: this.normalizeAccess(data) });
   }
 
   async remove(id: number) { await this.prisma.apiEndpoint.delete({ where: { id } }); return { success: true }; }
 
-  async getAppConfig() {
-    const endpoints = await this.prisma.apiEndpoint.findMany({ where: { status: 1 } });
+  async getAppConfig(memberLevel = 0) {
+    const endpoints = await this.prisma.apiEndpoint.findMany({
+      where: { status: 1, minMemberLevel: { lte: memberLevel } },
+      orderBy: [{ isDefault: 'desc' }, { priority: 'desc' }, { id: 'asc' }],
+    });
     return {
       vod: endpoints.filter(e => e.type === 0),
       live: endpoints.filter(e => e.type === 1),
       wall: endpoints.filter(e => e.type === 2),
+      parse: endpoints.filter(e => e.type === 3),
     };
+  }
+
+  private normalizeAccess(data: Record<string, any>) {
+    const normalized: Record<string, any> = { ...data };
+    if (normalized.minMemberLevel !== undefined) normalized.minMemberLevel = Math.max(0, Number(normalized.minMemberLevel) || 0);
+    if (normalized.priority !== undefined) normalized.priority = Number(normalized.priority) || 0;
+    if (normalized.isDefault !== undefined) normalized.isDefault = Boolean(normalized.isDefault);
+    return normalized;
   }
 
   async testEndpoint(id: number) {

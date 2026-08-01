@@ -1,6 +1,7 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
-import { CreateLevelDto, CreateMemberRuleDto, UpdateLevelDto, UpdateMemberRuleDto } from './dto/member.dto';
+import * as bcrypt from 'bcryptjs';
+import { BatchMemberDto, CreateLevelDto, CreateMemberDto, CreateMemberRuleDto, UpdateLevelDto, UpdateMemberDto, UpdateMemberRuleDto } from './dto/member.dto';
 import { MembershipGrantService } from './membership-grant.service';
 
 @Injectable()
@@ -15,7 +16,115 @@ export class MemberService {
   }
 
   async getPackages() {
-    return this.prisma.memberGroup.findMany({ where: { status: 1 }, orderBy: { sort: 'asc' } });
+    return this.prisma.memberGroup.findMany({
+      where: { status: 1 },
+      orderBy: [{ sort: 'asc' }, { id: 'asc' }],
+      select: {
+        id: true,
+        name: true,
+        levelId: true,
+        price: true,
+        duration: true,
+        isPermanent: true,
+        description: true,
+        discount: true,
+        dailyScore: true,
+        sort: true,
+      },
+    });
+  }
+
+  async purchaseWithBalance(appUserId: number, groupId: number) {
+    const [user, group] = await Promise.all([
+      this.prisma.appUser.findUnique({ where: { id: appUserId } }),
+      this.prisma.memberGroup.findFirst({ where: { id: groupId, status: 1 } }),
+    ]);
+    if (!user || user.status !== 1) throw new NotFoundException('应用用户不存在或已禁用');
+    if (!group || !group.levelId) throw new NotFoundException('会员套餐不存在或已停用');
+    const amount = Number(group.price);
+    if (!Number.isFinite(amount) || amount < 0) throw new BadRequestException('会员套餐价格无效');
+
+    return this.prisma.$transaction(async (tx) => {
+      const latestUser = await tx.appUser.findUnique({ where: { id: appUserId } });
+      if (!latestUser || latestUser.status !== 1) throw new NotFoundException('应用用户不存在或已禁用');
+      if (latestUser.balance < amount) throw new BadRequestException(`余额不足，还需${(amount - latestUser.balance).toFixed(2)}元`);
+
+      const updatedUser = await tx.appUser.update({
+        where: { id: appUserId },
+        data: { balance: { decrement: amount } },
+      });
+      const orderId = `BAL${Date.now()}${Math.floor(Math.random() * 1000)}`;
+      await tx.balanceLog.create({
+        data: {
+          userId: String(appUserId),
+          type: 'purchase',
+          amount: -amount,
+          balance: updatedUser.balance,
+          remark: `余额购买会员套餐：${group.name}`,
+          orderId,
+        },
+      });
+      const result = await this.membershipGrantService.grantInTransaction(tx, {
+        appUserId,
+        levelId: group.levelId,
+        source: 'balance',
+        referenceId: orderId,
+      });
+      return {
+        success: true,
+        orderId,
+        balance: updatedUser.balance,
+        levelName: result.level.name,
+        expireAt: result.expireAt.toISOString(),
+        permanent: result.permanent,
+      };
+    });
+  }
+
+  async purchaseWithScore(appUserId: number, groupId: number) {
+    const [user, group] = await Promise.all([
+      this.prisma.appUser.findUnique({ where: { id: appUserId } }),
+      this.prisma.memberGroup.findFirst({ where: { id: groupId, status: 1 } }),
+    ]);
+    if (!user || user.status !== 1) throw new NotFoundException('应用用户不存在或已禁用');
+    if (!group || !group.levelId) throw new NotFoundException('会员套餐不存在或已停用');
+    const points = Math.round(Number(group.price) * 100);
+    if (!Number.isFinite(points) || points < 0) throw new BadRequestException('会员套餐积分价格无效');
+
+    return this.prisma.$transaction(async (tx) => {
+      const latestUser = await tx.appUser.findUnique({ where: { id: appUserId } });
+      if (!latestUser || latestUser.status !== 1) throw new NotFoundException('应用用户不存在或已禁用');
+      if (latestUser.score < points) throw new BadRequestException(`积分不足，需要${points}积分`);
+
+      const updatedUser = await tx.appUser.update({
+        where: { id: appUserId },
+        data: { score: { decrement: points } },
+      });
+      const orderId = `SCORE${Date.now()}${Math.floor(Math.random() * 1000)}`;
+      await tx.appScoreLog.create({
+        data: {
+          userId: appUserId,
+          type: 'purchase',
+          score: -points,
+          balance: updatedUser.score,
+          remark: `积分购买会员套餐：${group.name}`,
+        },
+      });
+      const result = await this.membershipGrantService.grantInTransaction(tx, {
+        appUserId,
+        levelId: group.levelId,
+        source: 'score',
+        referenceId: orderId,
+      });
+      return {
+        success: true,
+        orderId,
+        score: updatedUser.score,
+        levelName: result.level.name,
+        expireAt: result.expireAt.toISOString(),
+        permanent: result.permanent,
+      };
+    });
   }
 
   async createLevel(dto: CreateLevelDto) {
@@ -35,19 +144,29 @@ export class MemberService {
     return { success: true };
   }
 
-  async getMembers(page = 1, size = 20, group?: string, status?: string) {
-    const skip = (page - 1) * size;
+  async getMembers(page = 1, size = 20, group?: string, status?: string, keyword?: string) {
+    const safePage = Math.max(1, Number(page) || 1);
+    const safeSize = Math.min(100, Math.max(1, Number(size) || 20));
     const where: any = {};
-    if (group) where.memberLevel = +group;
-    if (status) where.status = +status;
+    if (group !== undefined && group !== '') where.memberLevel = Number(group);
+    if (status !== undefined && status !== '') where.status = Number(status);
+    const search = String(keyword || '').trim();
+    if (search) {
+      where.OR = [
+        { username: { contains: search } },
+        { nickname: { contains: search } },
+        { email: { contains: search } },
+      ];
+    }
     const [list, total] = await Promise.all([
       this.prisma.appUser.findMany({
-        skip,
-        take: size,
+        skip: (safePage - 1) * safeSize,
+        take: safeSize,
         where,
         orderBy: { createdAt: 'desc' },
         select: {
           id: true,
+          username: true,
           email: true,
           nickname: true,
           status: true,
@@ -56,6 +175,7 @@ export class MemberService {
           memberLevel: true,
           memberExpireAt: true,
           createdAt: true,
+          updatedAt: true,
         },
       }),
       this.prisma.appUser.count({ where }),
@@ -72,9 +192,45 @@ export class MemberService {
         level: levelMap.get(member.memberLevel) || null,
       })),
       total,
-      page,
-      size,
+      page: safePage,
+      size: safeSize,
     };
+  }
+
+  async createMember(data: CreateMemberDto) {
+    const username = String(data.username || '').trim();
+    const password = String(data.password || '');
+    const email = String(data.email || '').trim() || `${username.replace(/[^a-zA-Z0-9_-]/g, '') || 'user'}_${Date.now()}@local.bee-tv`;
+    const levelId = data.levelId === undefined ? 0 : Number(data.levelId);
+    if (username.length < 2) throw new BadRequestException('用户名至少2个字符');
+    if (password.length < 6) throw new BadRequestException('密码长度至少6位');
+    if (!Number.isInteger(levelId) || levelId < 0) throw new BadRequestException('会员套餐参数无效');
+    const duplicate = await this.prisma.appUser.findFirst({ where: { OR: [{ username }, { email }] } });
+    if (duplicate) throw new ConflictException('用户名或邮箱已存在');
+    const passwordHash = await bcrypt.hash(password, 10);
+    const member = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.appUser.create({
+        data: {
+          username,
+          email,
+          nickname: String(data.nickname || username).trim() || username,
+          password: passwordHash,
+          score: Math.max(0, Number(data.score || 0)),
+          balance: Math.max(0, Number(data.balance || 0)),
+          status: Number(data.status ?? 1),
+        },
+      });
+      if (levelId > 0) {
+        await this.membershipGrantService.grantInTransaction(tx, {
+          appUserId: created.id,
+          levelId,
+          source: 'admin',
+          referenceId: data.remark || '后台创建会员并授权',
+        });
+      }
+      return tx.appUser.findUnique({ where: { id: created.id } });
+    });
+    return this.sanitizeMember(member);
   }
 
   async grantMembership(appUserId: number, levelId: number, remark = '') {
@@ -92,25 +248,93 @@ export class MemberService {
     };
   }
 
-  async updateMember(id: number, data: { levelId?: number; score?: number; balance?: number; status?: number; remark?: string }) {
+  async updateMember(id: number, data: UpdateMemberDto) {
     const existing = await this.prisma.appUser.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('应用用户不存在');
 
-    if (data.levelId && data.levelId !== existing.memberLevel) {
-      await this.grantMembership(id, data.levelId, data.remark || '后台调整会员套餐');
+    const username = data.username === undefined ? undefined : String(data.username).trim();
+    const email = data.email === undefined ? undefined : String(data.email).trim();
+    if (username !== undefined && username.length < 2) throw new BadRequestException('用户名至少2个字符');
+    if (data.password !== undefined && data.password !== '' && data.password.length < 6) throw new BadRequestException('密码长度至少6位');
+    if (username || email) {
+      const duplicate = await this.prisma.appUser.findFirst({
+        where: { id: { not: id }, OR: [...(username ? [{ username }] : []), ...(email ? [{ email }] : [])] },
+      });
+      if (duplicate) throw new ConflictException('用户名或邮箱已存在');
+    }
+    const requestedLevelId = data.levelId === undefined ? undefined : Number(data.levelId);
+    if (requestedLevelId !== undefined && (!Number.isInteger(requestedLevelId) || requestedLevelId < 0)) {
+      throw new BadRequestException('会员套餐参数无效');
     }
 
-    const updateData: { score?: number; balance?: number; status?: number } = {};
-    if (data.score !== undefined) updateData.score = Number(data.score);
-    if (data.balance !== undefined) updateData.balance = Number(data.balance);
+    const updateData: any = {};
+    if (requestedLevelId === 0 && existing.memberLevel !== 0) {
+      updateData.memberLevel = 0;
+      updateData.memberExpireAt = null;
+    }
+    if (username !== undefined) updateData.username = username;
+    if (email !== undefined && email) updateData.email = email;
+    if (data.nickname !== undefined) updateData.nickname = String(data.nickname).trim() || (username || existing.username || existing.nickname);
+    if (data.password !== undefined && data.password !== '') updateData.password = await bcrypt.hash(data.password, 10);
+    if (data.score !== undefined) updateData.score = Math.max(0, Number(data.score));
+    if (data.balance !== undefined) updateData.balance = Math.max(0, Number(data.balance));
     if (data.status !== undefined) updateData.status = Number(data.status);
-    if (Object.keys(updateData).length) await this.prisma.appUser.update({ where: { id }, data: updateData });
-    return this.prisma.appUser.findUnique({ where: { id } });
+    const updatedMember = await this.prisma.$transaction(async (tx) => {
+      if (requestedLevelId !== undefined && requestedLevelId > 0 && requestedLevelId !== existing.memberLevel) {
+        await this.membershipGrantService.grantInTransaction(tx, {
+          appUserId: id,
+          levelId: requestedLevelId,
+          source: 'admin',
+          referenceId: data.remark || '后台调整会员套餐',
+        });
+      }
+      if (Object.keys(updateData).length) await tx.appUser.update({ where: { id }, data: updateData });
+      if (data.status === 0) await tx.clientSession.deleteMany({ where: { userId: id } });
+      return tx.appUser.findUnique({ where: { id } });
+    });
+    return this.sanitizeMember(updatedMember);
+  }
+
+  async batchUpdateMembers(data: BatchMemberDto) {
+    if (!Array.isArray(data.ids)) throw new BadRequestException('会员列表格式无效');
+    const ids = [...new Set(data.ids.map(Number).filter((id) => Number.isInteger(id) && id > 0))];
+    if (!ids.length) throw new BadRequestException('请选择至少一个会员');
+    if (ids.length > 500) throw new BadRequestException('单次最多操作500个会员');
+    if (!['enable', 'disable', 'delete', 'setLevel'].includes(data.action)) throw new BadRequestException('不支持的批量操作');
+    if (data.action === 'setLevel') {
+      if (!data.levelId || data.levelId < 1) throw new BadRequestException('请选择会员套餐');
+      const level = await this.prisma.memberLevel.findFirst({ where: { id: data.levelId, status: 1 } });
+      if (!level) throw new NotFoundException('会员套餐不存在或已停用');
+      await this.prisma.$transaction(async (tx) => {
+        for (const id of ids) await this.membershipGrantService.grantInTransaction(tx, {
+          appUserId: id,
+          levelId: data.levelId!,
+          source: 'admin',
+          referenceId: data.remark || '后台批量授予会员套餐',
+        });
+      });
+      return { success: true, count: ids.length, action: data.action };
+    }
+    const status = data.action === 'enable' ? 1 : 0;
+    const result = await this.prisma.appUser.updateMany({ where: { id: { in: ids } }, data: { status } });
+    if (status === 0) await this.prisma.clientSession.deleteMany({ where: { userId: { in: ids } } });
+    return { success: true, count: result.count, action: data.action };
   }
 
   async deleteMember(id: number) {
-    await this.prisma.appUser.update({ where: { id }, data: { status: 0 } });
+    const user = await this.prisma.appUser.findUnique({ where: { id } });
+    if (!user) throw new NotFoundException('应用用户不存在');
+    await this.prisma.$transaction([
+      this.prisma.appUser.update({ where: { id }, data: { status: 0 } }),
+      this.prisma.clientSession.deleteMany({ where: { userId: id } }),
+    ]);
     return { success: true };
+  }
+
+  private sanitizeMember(member: any) {
+    if (!member) return null;
+    const { password, ...safe } = member;
+    return safe;
   }
 
   async generateCodes(levelId: number, count: number) {

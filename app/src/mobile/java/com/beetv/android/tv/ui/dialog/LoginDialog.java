@@ -100,9 +100,8 @@ public class LoginDialog implements DialogInterface.OnDismissListener {
                 String nickname = user.has("nickname") ? user.get("nickname").getAsString() : account;
                 int score = user.has("score") ? user.get("score").getAsInt() : 0;
                 Setting.putAuthToken(token);
-                Setting.putUserEmail(email);
-                Setting.putUserNickname(nickname);
-                Setting.putUserScore(score);
+                saveUserProfile(user, email, nickname, score);
+                BeeApi.get().syncVodConfig();
                 dialog.getOwnerActivity().runOnUiThread(() -> {
                     setLoading(false);
                     if (callback != null) callback.onLoginResult(email, nickname, score);
@@ -136,9 +135,8 @@ public class LoginDialog implements DialogInterface.OnDismissListener {
                 JsonObject user = data.has("user") ? data.getAsJsonObject("user") : data;
                 int score = user.has("score") ? user.get("score").getAsInt() : 0;
                 Setting.putAuthToken(token);
-                Setting.putUserEmail(registerEmail);
-                Setting.putUserNickname(registerNickname);
-                Setting.putUserScore(score);
+                saveUserProfile(user, registerEmail, registerNickname, score);
+                BeeApi.get().syncVodConfig();
                 dialog.getOwnerActivity().runOnUiThread(() -> {
                     setLoading(false);
                     if (callback != null) callback.onLoginResult(registerEmail, registerNickname, score);
@@ -151,6 +149,23 @@ public class LoginDialog implements DialogInterface.OnDismissListener {
                 });
             }
         }).start();
+    }
+
+    private void saveUserProfile(JsonObject user, String fallbackEmail, String fallbackNickname, int fallbackScore) {
+        String email = user.has("email") && !user.get("email").isJsonNull() ? user.get("email").getAsString() : fallbackEmail;
+        String nickname = user.has("nickname") && !user.get("nickname").isJsonNull() ? user.get("nickname").getAsString() : fallbackNickname;
+        String avatar = user.has("avatar") && !user.get("avatar").isJsonNull() ? user.get("avatar").getAsString() : "";
+        int score = user.has("score") && !user.get("score").isJsonNull() ? user.get("score").getAsInt() : fallbackScore;
+        int memberLevel = user.has("memberLevel") && !user.get("memberLevel").isJsonNull() ? user.get("memberLevel").getAsInt() : 0;
+        String memberExpireAt = user.has("memberExpireAt") && !user.get("memberExpireAt").isJsonNull() ? user.get("memberExpireAt").getAsString() : "";
+        String balance = user.has("balance") && !user.get("balance").isJsonNull() ? user.get("balance").getAsString() : "0";
+        Setting.putUserEmail(email);
+        Setting.putUserNickname(nickname);
+        Setting.putUserAvatar(avatar);
+        Setting.putUserScore(score);
+        Setting.putUserMemberLevel(memberLevel);
+        Setting.putUserMemberExpireAt(memberExpireAt);
+        Setting.putUserBalance(balance);
     }
 
     private void showError(String msg) {

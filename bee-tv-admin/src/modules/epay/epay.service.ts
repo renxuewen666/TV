@@ -100,21 +100,39 @@ export class EpayService {
     return 'success';
   }
 
-  async queryOrder(orderNo: string) {
+  async queryOrder(orderNo: string, appUserId?: number) {
     const order = await this.prisma.paymentOrder.findUnique({ where: { orderNo } });
-    if (!order) throw new NotFoundException('订单不存在');
-    return { orderNo: order.orderNo, amount: order.amount, status: order.status, paidAt: order.paidAt };
+    if (!order || (appUserId !== undefined && order.userId !== String(appUserId))) {
+      throw new NotFoundException('订单不存在');
+    }
+    return {
+      orderNo: order.orderNo,
+      amount: order.amount,
+      payType: order.payType,
+      status: order.status,
+      createdAt: order.createdAt,
+      paidAt: order.paidAt,
+    };
   }
 
-  async getOrders(page = 1, size = 20, status?: number) {
+  async getOrders(page = 1, size = 20, status?: number, appUserId?: number) {
     const where: any = {};
     if (status !== undefined && status !== null) where.status = Number(status);
+    if (appUserId !== undefined) where.userId = String(appUserId);
     const skip = (page - 1) * size;
     const [list, total] = await Promise.all([
       this.prisma.paymentOrder.findMany({ where, skip, take: size, orderBy: { createdAt: 'desc' } }),
       this.prisma.paymentOrder.count({ where }),
     ]);
-    return { list, total, page, size };
+    const levelIds = [...new Set(list.map((item) => item.levelId))];
+    const levels = levelIds.length ? await this.prisma.memberLevel.findMany({ where: { id: { in: levelIds } } }) : [];
+    const levelMap = new Map(levels.map((level) => [level.id, level.name]));
+    return {
+      list: list.map((item) => ({ ...item, levelName: levelMap.get(item.levelId) || '' })),
+      total,
+      page,
+      size,
+    };
   }
 
   private genOrderNo(): string {

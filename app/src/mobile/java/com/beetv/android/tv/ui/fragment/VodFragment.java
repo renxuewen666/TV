@@ -91,6 +91,7 @@ public class VodFragment extends BaseFragment implements ConfigCallback, SiteCal
     protected void initView() {
         EventBus.getDefault().register(this);
         mBinding.title.setSelected(true);
+        mBinding.bannerTitle.setSelected(true);
         setRecyclerView();
         setViewModel();
         showProgress();
@@ -103,10 +104,12 @@ public class VodFragment extends BaseFragment implements ConfigCallback, SiteCal
         mBinding.top.setOnClickListener(this::onTop);
         mBinding.logo.setOnClickListener(this::onLogo);
         mBinding.link.setOnClickListener(this::onLink);
-        mBinding.title.setOnClickListener(this::onSite);
+        mBinding.title.setOnClickListener(v -> SearchActivity.start(requireActivity()));
+        mBinding.keep.setOnClickListener(v -> KeepActivity.start(requireActivity()));
+        mBinding.history.setOnClickListener(v -> HistoryActivity.start(requireActivity()));
+        mBinding.banner.setOnClickListener(v -> SearchActivity.start(requireActivity()));
         mBinding.filter.setOnClickListener(this::onFilter);
         mBinding.filter.setOnLongClickListener(this::onLink);
-        mBinding.toolbar.setOnMenuItemClickListener(this::onMenuItemClick);
         mBinding.appBar.addOnOffsetChangedListener((appBarLayout, verticalOffset) -> {
             float factor = Math.abs(verticalOffset * 1f / appBarLayout.getTotalScrollRange());
             int padding = (int) (ResUtil.dp2px(12) * factor);
@@ -161,7 +164,10 @@ public class VodFragment extends BaseFragment implements ConfigCallback, SiteCal
     private void setTitle() {
         List<String> items = Arrays.asList(getHome().getName(), getConfig().getName(), getString(R.string.app_name));
         Optional<String> optional = items.stream().filter(s -> !TextUtils.isEmpty(s)).findFirst();
-        optional.ifPresent(s -> mBinding.title.setText(s));
+        optional.ifPresent(s -> {
+            mBinding.title.setText(getString(R.string.home_search_hint, s));
+            mBinding.bannerTitle.setText(s);
+        });
     }
 
     private void onTop(View view) {

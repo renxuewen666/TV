@@ -265,8 +265,12 @@ public class Result implements Parcelable {
         return pagecount == null ? 0 : pagecount;
     }
 
+    /**
+     * TVBox/UI6 的播放结果省略 parse 时默认仍需走解析链路。
+     * 只有站源明确返回 parse:0 的直链才直接交给播放器。
+     */
     public Integer getParse() {
-        return parse == null ? 0 : parse;
+        return parse == null ? 1 : parse;
     }
 
     public void setParse(Integer parse) {

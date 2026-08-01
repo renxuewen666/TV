@@ -5,7 +5,7 @@ import { AdminAuthGuard } from '../../common/guards/admin-auth.guard';
 import { Public } from '../../common/decorators/public.decorator';
 import { AllowAppUser } from '../../common/decorators/allow-app-user.decorator';
 import { MemberService } from './member.service';
-import { CreateLevelDto, UpdateLevelDto, CreateMemberRuleDto, UpdateMemberRuleDto } from './dto/member.dto';
+import { BatchMemberDto, CreateLevelDto, CreateMemberDto, UpdateLevelDto, UpdateMemberDto, CreateMemberRuleDto, UpdateMemberRuleDto } from './dto/member.dto';
 import { SystemService } from '../system/system.service';
 
 @ApiTags('会员配置')
@@ -22,6 +22,22 @@ export class MemberController {
   @Get('packages')
   getPackages() { return this.memberService.getPackages(); }
 
+  @AllowAppUser()
+  @UseGuards(JwtAuthGuard)
+  @Post('purchase/balance')
+  purchaseWithBalance(@Req() req: any, @Body() body: { groupId: number }) {
+    if (req.user?.role !== 'user') throw new UnauthorizedException('请使用应用用户登录后购买会员');
+    return this.memberService.purchaseWithBalance(Number(req.user.sub), Number(body.groupId));
+  }
+
+  @AllowAppUser()
+  @UseGuards(JwtAuthGuard)
+  @Post('purchase/score')
+  purchaseWithScore(@Req() req: any, @Body() body: { groupId: number }) {
+    if (req.user?.role !== 'user') throw new UnauthorizedException('请使用应用用户登录后购买会员');
+    return this.memberService.purchaseWithScore(Number(req.user.sub), Number(body.groupId));
+  }
+
   @Post('levels')
   createLevel(@Body() dto: CreateLevelDto) { return this.memberService.createLevel(dto); }
 
@@ -32,13 +48,23 @@ export class MemberController {
   deleteLevel(@Param('id') id: string) { return this.memberService.deleteLevel(+id); }
 
   @Get('users')
-  getMembers(@Query('page') page?: string, @Query('size') size?: string, @Query('group') group?: string, @Query('status') status?: string) {
-    return this.memberService.getMembers(+(page || 1), +(size || 20), group, status);
+  getMembers(@Query('page') page?: string, @Query('size') size?: string, @Query('group') group?: string, @Query('status') status?: string, @Query('keyword') keyword?: string) {
+    return this.memberService.getMembers(+(page || 1), +(size || 20), group, status, keyword);
+  }
+
+  @Post('users')
+  createMember(@Body() dto: CreateMemberDto) {
+    return this.memberService.createMember(dto);
+  }
+
+  @Post('users/batch')
+  batchUpdateMembers(@Body() dto: BatchMemberDto) {
+    return this.memberService.batchUpdateMembers(dto);
   }
 
   @Put('users/:id')
-  updateMember(@Param('id') id: string, @Body() body: any) {
-    return this.memberService.updateMember(+id, body);
+  updateMember(@Param('id') id: string, @Body() dto: UpdateMemberDto) {
+    return this.memberService.updateMember(+id, dto);
   }
 
   @Post('users/:id/grant')

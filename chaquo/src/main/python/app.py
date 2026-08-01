@@ -1,5 +1,4 @@
 import os
-import requests
 from importlib.machinery import SourceFileLoader
 import json
 
@@ -25,6 +24,7 @@ def writeFile(path, content):
 
 
 def redirect(url):
+    import requests
     rsp = requests.get(url, allow_redirects=False, verify=False)
     if 'Location' in rsp.headers:
         return redirect(rsp.headers['Location'])

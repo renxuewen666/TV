@@ -387,7 +387,39 @@ public class Setting {
     }
 
     public static void putUserScore(int score) {
-        Prefers.put("user_score", score);
+        Prefers.put("user_score", Math.max(0, score));
+    }
+
+    public static String getUserAvatar() {
+        return Prefers.getString("user_avatar", "");
+    }
+
+    public static void putUserAvatar(String avatar) {
+        Prefers.put("user_avatar", avatar == null ? "" : avatar);
+    }
+
+    public static int getUserMemberLevel() {
+        return Prefers.getInt("user_member_level", 0);
+    }
+
+    public static void putUserMemberLevel(int level) {
+        Prefers.put("user_member_level", Math.max(0, level));
+    }
+
+    public static String getUserMemberExpireAt() {
+        return Prefers.getString("user_member_expire_at", "");
+    }
+
+    public static void putUserMemberExpireAt(String expireAt) {
+        Prefers.put("user_member_expire_at", expireAt == null ? "" : expireAt);
+    }
+
+    public static String getUserBalance() {
+        return Prefers.getString("user_balance", "0");
+    }
+
+    public static void putUserBalance(String balance) {
+        Prefers.put("user_balance", balance == null || balance.isEmpty() ? "0" : balance);
     }
 
     public static boolean isLoggedIn() {
@@ -399,5 +431,9 @@ public class Setting {
         Prefers.put("user_email", "");
         Prefers.put("user_nickname", "");
         Prefers.put("user_score", 0);
+        Prefers.put("user_avatar", "");
+        Prefers.put("user_member_level", 0);
+        Prefers.put("user_member_expire_at", "");
+        Prefers.put("user_balance", "0");
     }
 }

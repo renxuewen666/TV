@@ -10,6 +10,9 @@
         <template #default="{row}">{{ apiTypeLabel(row.type) }}</template>
       </el-table-column>
       <el-table-column prop="url" label="地址" show-overflow-tooltip />
+      <el-table-column prop="priority" label="优先级" width="90" />
+      <el-table-column prop="minMemberLevel" label="最低等级" width="100"><template #default="{row}">{{ row.minMemberLevel || 0 }}</template></el-table-column>
+      <el-table-column label="默认" width="80"><template #default="{row}"><el-tag :type="row.isDefault ? 'success' : 'info'">{{ row.isDefault ? '是' : '否' }}</el-tag></template></el-table-column>
       <el-table-column prop="remark" label="备注" />
       <el-table-column prop="status" label="状态"><template #default="{row}">{{ row.status ? '启用' : '禁用' }}</template></el-table-column>
       <el-table-column label="操作" width="260">
@@ -24,8 +27,12 @@
     <el-dialog v-model="visible" title="接口" width="500px">
       <el-form :model="form" label-width="80px">
         <el-form-item label="名称"><el-input v-model="form.name" /></el-form-item>
-        <el-form-item label="类型"><el-select v-model="form.type"><el-option label="点播" :value="0" /><el-option label="直播" :value="1" /><el-option label="壁纸" :value="2" /></el-select></el-form-item>
-        <el-form-item label="地址"><el-input v-model="form.url" /></el-form-item>
+        <el-form-item label="类型"><el-select v-model="form.type"><el-option label="点播" :value="0" /><el-option label="直播" :value="1" /><el-option label="壁纸" :value="2" /><el-option label="播放解析" :value="3" /></el-select></el-form-item>
+        <el-form-item label="地址"><el-input v-model="form.url" placeholder="解析线路可使用 {url} 作为影片地址占位符" /></el-form-item>
+        <el-form-item label="优先级"><el-input-number v-model="form.priority" :min="0" /></el-form-item>
+        <el-form-item label="最低等级"><el-input-number v-model="form.minMemberLevel" :min="0" /><span class="hint">0 表示游客可用。</span></el-form-item>
+        <el-form-item label="默认线路"><el-switch v-model="form.isDefault" /><span class="hint">点播、直播、壁纸和解析线路各自按默认、优先级排序。</span></el-form-item>
+        <el-form-item label="状态"><el-switch v-model="form.status" :active-value="1" :inactive-value="0" /></el-form-item>
         <el-form-item label="备注"><el-input v-model="form.remark" /></el-form-item>
       </el-form>
       <template #footer>
@@ -68,7 +75,7 @@ const testing = ref(false)
 const form = ref<any>({})
 const testData = ref<any>(null)
 const currentTestId = ref(0)
-const apiTypeLabel = (type: number) => ({ 0: '点播', 1: '直播', 2: '壁纸' } as Record<number, string>)[Number(type)] || '未知'
+const apiTypeLabel = (type: number) => ({ 0: '点播', 1: '直播', 2: '壁纸', 3: '播放解析' } as Record<number, string>)[Number(type)] || '未知'
 
 const formatResult = (data: any) => {
   if (typeof data === 'string') {
@@ -83,7 +90,7 @@ onMounted(async () => {
 })
 
 const openDialog = (row?: any) => {
-  form.value = row ? { ...row } : { name: '', type: 0, url: '', remark: '' }
+  form.value = row ? { ...row } : { name: '', type: 0, url: '', remark: '', priority: 0, minMemberLevel: 0, isDefault: false, status: 1 }
   visible.value = true
 }
 
@@ -134,3 +141,7 @@ const runTest = async () => {
   }
 }
 </script>
+
+<style scoped>
+.hint { margin-left: 8px; color: #909399; font-size: 12px; line-height: 1.4; }
+</style>

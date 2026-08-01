@@ -1,12 +1,13 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { AdminAuthGuard } from '../../common/guards/admin-auth.guard';
 import { MemberGroupService } from './member.group.service';
 import { CreateMemberGroupDto, UpdateMemberGroupDto, QueryMemberGroupsDto } from './dto/member-group/create-member-group.dto';
 
 @ApiTags('会员分组')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, AdminAuthGuard)
 @Controller('member/groups')
 export class MemberGroupController {
   constructor(private memberGroupService: MemberGroupService) {}

@@ -14,15 +14,15 @@ export class RepoService {
   }
 
   async findAll() {
-    return this.prisma.repoSource.findMany({ orderBy: { priority: 'desc' } });
+    return this.prisma.repoSource.findMany({ orderBy: [{ isDefault: 'desc' }, { priority: 'desc' }, { id: 'asc' }] });
   }
 
-  async create(data: { name: string; url: string; type: number; priority?: number }) {
-    return this.prisma.repoSource.create({ data });
+  async create(data: { name: string; url: string; type: number; priority?: number; minMemberLevel?: number; isDefault?: boolean; status?: number }) {
+    return this.prisma.repoSource.create({ data: this.normalizeAccess(data) as any });
   }
 
-  async update(id: number, data: { name?: string; url?: string; priority?: number; status?: number }) {
-    return this.prisma.repoSource.update({ where: { id }, data });
+  async update(id: number, data: { name?: string; url?: string; priority?: number; minMemberLevel?: number; isDefault?: boolean; status?: number }) {
+    return this.prisma.repoSource.update({ where: { id }, data: this.normalizeAccess(data) });
   }
 
   async remove(id: number) {
@@ -210,7 +210,17 @@ export class RepoService {
     }
   }
 
-  async getActiveRepos() {
-    return this.prisma.repoSource.findMany({ where: { status: 1 }, orderBy: { priority: 'desc' } });
+  async getActiveRepos(memberLevel = 0) {
+    return this.prisma.repoSource.findMany({
+      where: { status: 1, minMemberLevel: { lte: memberLevel } },
+      orderBy: [{ isDefault: 'desc' }, { priority: 'desc' }, { id: 'asc' }],
+    });
+  }
+
+  private normalizeAccess(data: Record<string, any>) {
+    const normalized: Record<string, any> = { ...data };
+    if (normalized.minMemberLevel !== undefined) normalized.minMemberLevel = Math.max(0, Number(normalized.minMemberLevel) || 0);
+    if (normalized.isDefault !== undefined) normalized.isDefault = Boolean(normalized.isDefault);
+    return normalized;
   }
 }

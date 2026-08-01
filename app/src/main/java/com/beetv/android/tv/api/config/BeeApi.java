@@ -1,8 +1,10 @@
 package com.beetv.android.tv.api.config;
 
+import com.beetv.android.tv.BuildConfig;
 import com.beetv.android.tv.Constant;
 import com.beetv.android.tv.Setting;
 import com.beetv.android.tv.bean.Config;
+import com.beetv.android.tv.utils.Util;
 import com.beetv.android.tv.impl.Callback;
 import com.github.catvod.net.OkHttp;
 import com.github.catvod.utils.Json;
@@ -83,6 +85,8 @@ public class BeeApi {
         JsonObject body = new JsonObject();
         body.addProperty("account", account);
         body.addProperty("password", password);
+        body.addProperty("appId", BuildConfig.UI6_APP_ID);
+        body.addProperty("deviceId", Util.getAndroidId());
         return postJsonGetData(base + "/member-auth/login", body);
     }
 
@@ -92,7 +96,13 @@ public class BeeApi {
         body.addProperty("email", email);
         body.addProperty("nickname", nickname);
         body.addProperty("password", password);
+        body.addProperty("appId", BuildConfig.UI6_APP_ID);
+        body.addProperty("deviceId", Util.getAndroidId());
         return postJsonGetData(base + "/member-auth/register", body);
+    }
+
+    public void syncVodConfig() throws Exception {
+        Ui6Config.refreshVodConfig();
     }
 
     public JsonObject getProfile() throws IOException {
@@ -176,22 +186,45 @@ public class BeeApi {
         return repos;
     }
 
-    public boolean activateCode(String userId, String code) {
-        try {
-            String base = Setting.getAdminUrl();
-            String url = base + "/member/activate";
-            JsonObject body = new JsonObject();
-            body.addProperty("userId", userId);
-            body.addProperty("code", code);
-            Request request = authBuilder(new Request.Builder().url(url)
-                .post(okhttp3.RequestBody.create(body.toString(), okhttp3.MediaType.parse("application/json"))))
-                .build();
-            Response response = OkHttp.client(TimeUnit.SECONDS.toMillis(15)).newCall(request).execute();
-            response.close();
-            return response.isSuccessful();
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
-        }
+    public JsonArray getPackages() throws IOException {
+        String base = Setting.getAdminUrl();
+        String body = get(base + "/member/packages");
+        JsonObject response = parseResponse(body);
+        return response.has("data") && response.get("data").isJsonArray()
+            ? response.getAsJsonArray("data") : new JsonArray();
+    }
+
+    public JsonObject purchaseWithBalance(int groupId) throws IOException {
+        String base = Setting.getAdminUrl();
+        JsonObject body = new JsonObject();
+        body.addProperty("groupId", groupId);
+        return postJsonGetData(base + "/member/purchase/balance", body);
+    }
+
+    public JsonObject purchaseWithScore(int groupId) throws IOException {
+        String base = Setting.getAdminUrl();
+        JsonObject body = new JsonObject();
+        body.addProperty("groupId", groupId);
+        return postJsonGetData(base + "/member/purchase/score", body);
+    }
+
+    public JsonArray getActiveNotices() throws IOException {
+        String base = Setting.getAdminUrl();
+        String body = get(base + "/notice/active");
+        JsonObject response = parseResponse(body);
+        return response.has("data") && response.get("data").isJsonArray()
+            ? response.getAsJsonArray("data") : new JsonArray();
+    }
+
+    public String getServiceContact() throws IOException {
+        JsonObject data = getJson(Setting.getAdminUrl() + "/system/public/client");
+        return Json.safeString(data, "serviceContact");
+    }
+
+    public JsonObject activateCode(String code) throws IOException {
+        String base = Setting.getAdminUrl();
+        JsonObject body = new JsonObject();
+        body.addProperty("code", code);
+        return postJsonGetData(base + "/member/activate", body);
     }
 }

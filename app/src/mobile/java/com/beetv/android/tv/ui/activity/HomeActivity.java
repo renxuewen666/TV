@@ -39,6 +39,7 @@ import com.beetv.android.tv.service.PlaybackService;
 import com.beetv.android.tv.ui.base.BaseActivity;
 import com.beetv.android.tv.ui.custom.FragmentStateManager;
 import com.beetv.android.tv.ui.dialog.LoginDialog;
+import com.beetv.android.tv.ui.fragment.FongmiSettingFragment;
 import com.beetv.android.tv.ui.fragment.SettingFragment;
 import com.beetv.android.tv.ui.fragment.SettingPlayerFragment;
 import com.beetv.android.tv.ui.fragment.VodFragment;
@@ -121,6 +122,7 @@ public class HomeActivity extends BaseActivity implements NavigationBarView.OnIt
                 if (position == 0) return VodFragment.newInstance();
                 if (position == 1) return SettingFragment.newInstance();
                 if (position == 2) return SettingPlayerFragment.newInstance();
+                if (position == 3) return FongmiSettingFragment.newInstance();
                 return null;
             }
         };
@@ -225,7 +227,7 @@ public class HomeActivity extends BaseActivity implements NavigationBarView.OnIt
     protected void onBackInvoked() {
         if (!mBinding.navigation.getMenu().findItem(R.id.vod).isVisible()) {
             setNavigation();
-        } else if (mManager.isVisible(2)) {
+        } else if (mManager.isVisible(2) || mManager.isVisible(3)) {
             change(1);
         } else if (mManager.isVisible(1)) {
             mBinding.navigation.setSelectedItemId(R.id.vod);
@@ -278,7 +280,23 @@ public class HomeActivity extends BaseActivity implements NavigationBarView.OnIt
         if (mTrialHandler != null && mTrialRunnable != null) {
             mTrialHandler.removeCallbacks(mTrialRunnable);
         }
+        reloadMemberVodConfig();
         Notify.show(getString(R.string.login_success, nickname.isEmpty() ? email : nickname));
+    }
+
+    private void reloadMemberVodConfig() {
+        VodConfig.load(Config.vod(), new Callback() {
+            @Override
+            public void success() {
+                RefreshEvent.config();
+                RefreshEvent.video();
+            }
+
+            @Override
+            public void error(String msg) {
+                Notify.show(msg);
+            }
+        });
     }
 
     @Override

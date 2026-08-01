@@ -194,4 +194,66 @@
         <item>选择字幕</item>
     </string-array>
 
+    <!-- 登录与会员中心 -->
+    <string name="login_title">账号登录</string>
+    <string name="login_reg_title">注册账号</string>
+    <string name="login_account_hint">账号 / 手机号</string>
+    <string name="login_nickname_hint">昵称</string>
+    <string name="login_password_hint">密码</string>
+    <string name="login_btn">登录</string>
+    <string name="login_reg_btn">注册</string>
+    <string name="login_toggle_register">创建账号</string>
+    <string name="login_toggle_login">已有账号？去登录</string>
+    <string name="login_skip">游客浏览</string>
+    <string name="login_success">欢迎回来，%s</string>
+    <string name="login_fail">登录失败，请检查账号和密码</string>
+    <string name="setting_member_center">会员中心</string>
+    <string name="setting_logout">退出登录</string>
+    <string name="mine_avatar_text">我</string>
+    <string name="mine_login_title">登录蜜蜂影视账号</string>
+    <string name="mine_login_tip">登录后即可使用会员服务</string>
+    <string name="mine_guest_tip">当前为游客模式，登录后可同步账号、会员与积分。</string>
+    <string name="mine_guest_level">游客</string>
+    <string name="mine_member_level_value">会员等级：%1$d</string>
+    <string name="mine_member_expire_none">暂未开通会员</string>
+    <string name="mine_member_expire_value">会员到期：%1$s</string>
+    <string name="mine_balance_value">余额：¥%1$s</string>
+    <string name="mine_qr_login">TV 扫码登录</string>
+    <string name="mine_notice">消息通知</string>
+    <string name="mine_vip_time">影视会员</string>
+    <string name="mine_member_expire">会员到期</string>
+    <string name="mine_coupon">卡券</string>
+    <string name="mine_balance">账户余额</string>
+    <string name="mine_score">账户积分</string>
+    <string name="mine_score_value">积分：%1$d</string>
+    <string name="mine_my_services">我的服务</string>
+    <string name="mine_member_services">会员服务</string>
+    <string name="mine_common_settings">常用设置</string>
+    <string name="mine_signin">每日签到</string>
+    <string name="mine_signing_in">正在签到…</string>
+    <string name="mine_signin_success">签到成功</string>
+    <string name="mine_member_package">会员套餐</string>
+    <string name="mine_day_unit">天</string>
+    <string name="mine_package_empty">暂未配置可用会员套餐。</string>
+    <string name="mine_activate_title">兑换会员卡密</string>
+    <string name="mine_activate_hint">请输入会员卡密</string>
+    <string name="mine_activate">立即兑换</string>
+    <string name="mine_activate_success">兑换成功，会员资料已刷新。</string>
+    <string name="mine_app_settings">个性设置</string>
+    <string name="mine_about">关于</string>
+    <string name="mine_service">联系客服</string>
+    <string name="mine_service_tip">客服功能即将接入，请关注后续公告。</string>
+    <string name="mine_mall_banner">会员商城 · 开通会员，畅享更多影视服务</string>
+    <string name="mine_vod_repo">仓库列表</string>
+    <string name="mine_vod_home">首页数据</string>
+    <string name="mine_wall_local">本地墙纸</string>
+    <string name="mine_wall_network">网络墙纸</string>
+    <string name="mine_version_update">版本更新</string>
+    <string name="mine_clear_cache">清理缓存</string>
+    <string name="mine_doh_empty">当前仓库未提供可用 DoH。</string>
+    <string name="mine_wall_refresh_success">网络墙纸已刷新。</string>
+    <string name="mine_cache_cleared">缓存已清理。</string>
+    <string name="mine_version_message">蜜蜂影视\n版本 %1$s</string>
+    <string name="mine_logout_success">已退出登录</string>
+
 </resources>

@@ -25,6 +25,23 @@ export class PaymentService {
       this.prisma.paymentOrder.findMany({ skip, take: size, orderBy: { createdAt: 'desc' } }),
       this.prisma.paymentOrder.count(),
     ]);
-    return { list, total, page, size };
+    const levelIds = [...new Set(list.map((item) => item.levelId))];
+    const userIds = [...new Set(list.map((item) => Number(item.userId)).filter((id) => Number.isInteger(id) && id > 0))];
+    const [levels, users] = await Promise.all([
+      levelIds.length ? this.prisma.memberLevel.findMany({ where: { id: { in: levelIds } } }) : [],
+      userIds.length ? this.prisma.appUser.findMany({ where: { id: { in: userIds } }, select: { id: true, nickname: true, email: true } }) : [],
+    ]);
+    const levelMap = new Map<number, string>(levels.map((level: any) => [level.id, level.name] as [number, string]));
+    const userMap = new Map<number, any>(users.map((user: any) => [user.id, user] as [number, any]));
+    return {
+      list: list.map((item) => ({
+        ...item,
+        levelName: levelMap.get(item.levelId) || '',
+        user: userMap.get(Number(item.userId)) || null,
+      })),
+      total,
+      page,
+      size,
+    };
   }
 }

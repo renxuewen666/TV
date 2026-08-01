@@ -1,14 +1,39 @@
 import { Injectable } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { PrismaClient } from '@prisma/client';
 
 @Injectable()
 export class ContentService {
-  constructor(private prisma: PrismaClient) {}
+  constructor(
+    private prisma: PrismaClient,
+    private jwtService: JwtService,
+  ) {}
 
-  private async getActiveVodEndpoint(): Promise<string | null> {
+  private async getMemberLevel(token?: string): Promise<number> {
+    if (!token) return 0;
+    try {
+      const payload: any = this.jwtService.verify(token);
+      const session = await this.prisma.clientSession.findFirst({
+        where: { tokenId: payload.jti, userId: payload.sub, appId: payload.appId },
+      });
+      if (!session || (session.expireAt && session.expireAt <= new Date())) return 0;
+      const user = await this.prisma.appUser.findUnique({ where: { id: session.userId } });
+      if (!user || user.status !== 1 || !user.memberExpireAt || user.memberExpireAt <= new Date()) return 0;
+      return Math.max(0, user.memberLevel || 0);
+    } catch {
+      return 0;
+    }
+  }
+
+  private async getActiveVodEndpoint(token?: string): Promise<string | null> {
+    const memberLevel = await this.getMemberLevel(token);
     const ep = await this.prisma.apiEndpoint.findFirst({
-      where: { type: 0, status: 1 },
-      orderBy: { createdAt: 'asc' },
+      where: { type: 0, status: 1, minMemberLevel: { lte: memberLevel } },
+      orderBy: [
+        { isDefault: 'desc' },
+        { priority: 'desc' },
+        { id: 'asc' },
+      ],
     });
     if (!ep) return null;
     return ep.url.startsWith('http') ? ep.url : `http://${ep.url}`;
@@ -30,8 +55,8 @@ export class ContentService {
     }
   }
 
-  async getHome(query: { p?: string; t?: string; f?: string }) {
-    const baseUrl = await this.getActiveVodEndpoint();
+  async getHome(query: { p?: string; t?: string; f?: string }, token?: string) {
+    const baseUrl = await this.getActiveVodEndpoint(token);
     if (!baseUrl) return { list: [], total: 0, page: 1, pagecount: 0 };
 
     const params = new URLSearchParams();
@@ -43,8 +68,8 @@ export class ContentService {
     return this.proxyRequest(baseUrl, path);
   }
 
-  async detail(id: string) {
-    const baseUrl = await this.getActiveVodEndpoint();
+  async detail(id: string, token?: string) {
+    const baseUrl = await this.getActiveVodEndpoint(token);
     if (!baseUrl) return null;
 
     const params = new URLSearchParams({ ac: 'detail', ids: id });
@@ -52,8 +77,8 @@ export class ContentService {
     return this.proxyRequest(baseUrl, path);
   }
 
-  async search(keyword: string, query: { p?: string }) {
-    const baseUrl = await this.getActiveVodEndpoint();
+  async search(keyword: string, query: { p?: string }, token?: string) {
+    const baseUrl = await this.getActiveVodEndpoint(token);
     if (!baseUrl) return { list: [], total: 0, page: 1, pagecount: 0 };
 
     const params = new URLSearchParams();

@@ -19,6 +19,12 @@
             <template #default="{row}">{{ repoTypeLabel(row.type) }}</template>
           </el-table-column>
           <el-table-column prop="priority" label="优先级" width="90" />
+          <el-table-column prop="minMemberLevel" label="最低会员等级" width="130">
+            <template #default="{row}">{{ row.minMemberLevel || 0 }}</template>
+          </el-table-column>
+          <el-table-column label="默认线路" width="100">
+            <template #default="{row}"><el-tag :type="row.isDefault ? 'success' : 'info'">{{ row.isDefault ? '默认' : '否' }}</el-tag></template>
+          </el-table-column>
           <el-table-column prop="status" label="状态" width="90">
             <template #default="{row}"><el-tag :type="row.status?'success':'info'">{{ row.status ? '启用' : '禁用' }}</el-tag></template>
           </el-table-column>
@@ -75,6 +81,8 @@
         <el-form-item label="地址"><el-input v-model="form.url" placeholder="http接口地址，JAR仓可留空后上传" /></el-form-item>
         <el-form-item label="类型"><el-select v-model="form.type"><el-option label="csp-jar" :value="0" /><el-option label="js仓" :value="1" /><el-option label="py线路" :value="2" /></el-select></el-form-item>
         <el-form-item label="优先级"><el-input-number v-model="form.priority" :min="0" /></el-form-item>
+        <el-form-item label="最低等级"><el-input-number v-model="form.minMemberLevel" :min="0" /><span class="hint">0 表示游客可用；会员等级低于此值不会收到该线路。</span></el-form-item>
+        <el-form-item label="默认线路"><el-switch v-model="form.isDefault" /><span class="hint">可见线路中优先选默认，再按优先级排序。</span></el-form-item>
         <el-form-item label="状态"><el-switch v-model="form.status" :active-value="1" :inactive-value="0" /></el-form-item>
       </el-form>
       <template #footer><el-button @click="visible=false">取消</el-button><el-button type="primary" @click="save">确定</el-button></template>
@@ -223,7 +231,7 @@ const handleTabChange = async () => {
 }
 
 const openDialog = (row?: any) => {
-  form.value = row ? { ...row } : { name: '', url: '', type: 0, priority: 0, status: 1 }
+  form.value = row ? { ...row } : { name: '', url: '', type: 0, priority: 0, minMemberLevel: 0, isDefault: false, status: 1 }
   visible.value = true
 }
 

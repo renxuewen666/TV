@@ -9,6 +9,7 @@ interface User {
   memberLevel: number;
   memberExpireAt: string | null;
   score: number;
+  balance: number;
 }
 
 interface AuthState {

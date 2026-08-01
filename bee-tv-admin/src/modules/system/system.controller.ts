@@ -2,6 +2,7 @@ import { Controller, Get, Put, Post, Body, Param, Query, Res, UseGuards } from '
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { Response } from 'express';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { Public } from '../../common/decorators/public.decorator';
 import { SystemService } from './system.service';
 import { UpdateConfigDto, BatchUpdateDto, TestEmailDto, TestWeatherDto } from './dto/system.dto';
 
@@ -20,6 +21,16 @@ export class SystemController {
 
   @Get('group/:group')
   getByGroup(@Param('group') group: string) { return this.systemService.getByGroup(group); }
+
+  /**
+   * 面向客户端的最小公共配置。仅暴露可安全下发的联系信息，
+   * 不向未登录设备暴露系统、支付或管理配置。
+   */
+  @Public()
+  @Get('public/client')
+  async getPublicClientConfig() {
+    return { serviceContact: await this.systemService.getValue('service_contact') };
+  }
 
   @Get('source-rename')
   getSourceRename() { return this.systemService.getSourceRename(); }

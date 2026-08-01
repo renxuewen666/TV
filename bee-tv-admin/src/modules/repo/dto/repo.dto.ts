@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsInt } from 'class-validator';
+import { IsBoolean, IsInt, IsOptional, IsString, Min } from 'class-validator';
 
 export class CreateRepoDto {
   @IsString()
@@ -10,9 +10,17 @@ export class CreateRepoDto {
   @IsInt()
   type: number;
 
-  @IsOptional()
-  @IsInt()
+  @IsOptional() @IsInt()
   priority?: number;
+
+  @IsOptional() @IsInt() @Min(0)
+  minMemberLevel?: number;
+
+  @IsOptional() @IsBoolean()
+  isDefault?: boolean;
+
+  @IsOptional() @IsInt()
+  status?: number;
 }
 
 export class UpdateRepoDto {
@@ -24,6 +32,12 @@ export class UpdateRepoDto {
 
   @IsOptional() @IsInt()
   priority?: number;
+
+  @IsOptional() @IsInt() @Min(0)
+  minMemberLevel?: number;
+
+  @IsOptional() @IsBoolean()
+  isDefault?: boolean;
 
   @IsOptional() @IsInt()
   status?: number;

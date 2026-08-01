@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsInt } from 'class-validator';
+import { IsBoolean, IsInt, IsOptional, IsString, Min } from 'class-validator';
 
 export class CreateApiDto {
   @IsString()
@@ -10,20 +10,43 @@ export class CreateApiDto {
   @IsString()
   url: string;
 
-  @IsOptional()
-  @IsString()
+  @IsOptional() @IsString()
   remark?: string;
+
+  @IsOptional() @IsInt() @Min(0)
+  minMemberLevel?: number;
+
+  @IsOptional() @IsInt()
+  priority?: number;
+
+  @IsOptional() @IsBoolean()
+  isDefault?: boolean;
+
+  @IsOptional() @IsInt()
+  status?: number;
 }
 
 export class UpdateApiDto {
   @IsOptional() @IsString()
   name?: string;
 
+  @IsOptional() @IsInt()
+  type?: number;
+
   @IsOptional() @IsString()
   url?: string;
 
   @IsOptional() @IsString()
   remark?: string;
+
+  @IsOptional() @IsInt() @Min(0)
+  minMemberLevel?: number;
+
+  @IsOptional() @IsInt()
+  priority?: number;
+
+  @IsOptional() @IsBoolean()
+  isDefault?: boolean;
 
   @IsOptional() @IsInt()
   status?: number;

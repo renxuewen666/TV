@@ -2,7 +2,6 @@ import re
 import os
 import json
 import time
-import requests
 from lxml import etree
 from com.github.catvod import Proxy
 from com.chaquo.python import Python
@@ -93,11 +92,13 @@ class Spider(metaclass=ABCMeta):
         return clean
 
     def fetch(self, url, params=None, cookies=None, headers=None, timeout=5, verify=True, stream=False, allow_redirects = True):
+        import requests
         rsp = requests.get(url, params=params, cookies=cookies, headers=headers, timeout=timeout, verify=verify, stream=stream, allow_redirects=allow_redirects)
         rsp.encoding = 'utf-8'
         return rsp
 
     def post(self, url, params=None, data=None, json=None, cookies=None, headers=None, timeout=5, verify=True, stream=False, allow_redirects = True):
+        import requests
         rsp = requests.post(url, params=params, data=data, json=json, cookies=cookies, headers=headers, timeout=timeout, verify=verify, stream=stream, allow_redirects=allow_redirects)
         rsp.encoding = 'utf-8'
         return rsp

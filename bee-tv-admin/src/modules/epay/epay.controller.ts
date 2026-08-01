@@ -13,22 +13,22 @@ export class EpayController {
   constructor(private epayService: EpayService) {}
 
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, AdminAuthGuard)
   @Get('configs')
   getConfigs() { return this.epayService.getConfigs(); }
 
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, AdminAuthGuard)
   @Post('configs')
   createConfig(@Body() body: any) { return this.epayService.createConfig(body); }
 
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, AdminAuthGuard)
   @Put('configs/:id')
   updateConfig(@Param('id') id: string, @Body() body: any) { return this.epayService.updateConfig(+id, body); }
 
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, AdminAuthGuard)
   @Delete('configs/:id')
   deleteConfig(@Param('id') id: string) { return this.epayService.deleteConfig(+id); }
 
@@ -53,14 +53,21 @@ export class EpayController {
     return this.epayService.handleNotify(query);
   }
 
-  @Public()
+  @AllowAppUser()
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   @Get('query/:orderNo')
-  queryOrder(@Param('orderNo') orderNo: string) { return this.epayService.queryOrder(orderNo); }
+  queryOrder(@Req() req: any, @Param('orderNo') orderNo: string) {
+    const appUserId = req.user?.role === 'user' ? Number(req.user.sub) : undefined;
+    return this.epayService.queryOrder(orderNo, appUserId);
+  }
 
+  @AllowAppUser()
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Get('orders')
-  getOrders(@Query('page') page?: string, @Query('size') size?: string, @Query('status') status?: string) {
-    return this.epayService.getOrders(+(page || 1), +(size || 20), status ? +status : undefined);
+  getOrders(@Req() req: any, @Query('page') page?: string, @Query('size') size?: string, @Query('status') status?: string) {
+    const appUserId = req.user?.role === 'user' ? Number(req.user.sub) : undefined;
+    return this.epayService.getOrders(+(page || 1), +(size || 20), status ? +status : undefined, appUserId);
   }
 }

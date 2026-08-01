@@ -21,9 +21,9 @@ export class AppConfigService {
       this.prisma.notice.findMany({ where: { status: 1 }, orderBy: { createdAt: 'desc' } }),
       this.prisma.hotsearch.findMany({ where: { status: 1 }, orderBy: { sort: 'asc' } }),
       this.prisma.danmakuConfig.findMany({ where: { status: 1 }, orderBy: { sort: 'asc' } }),
-      this.prisma.repoSource.findMany({ where: { status: 1 }, orderBy: { priority: 'desc' } }),
+      this.prisma.repoSource.findMany({ where: { status: 1 }, orderBy: [{ isDefault: 'desc' }, { priority: 'desc' }, { id: 'asc' }] }),
       this.prisma.repoScript.findMany({ where: { status: 1 }, orderBy: [{ sort: 'asc' }, { createdAt: 'desc' }] }),
-      this.prisma.apiEndpoint.findMany({ where: { status: 1 }, orderBy: { createdAt: 'desc' } }),
+      this.prisma.apiEndpoint.findMany({ where: { status: 1 }, orderBy: [{ isDefault: 'desc' }, { priority: 'desc' }, { id: 'asc' }] }),
       this.prisma.homeLayout.findMany(),
       this.prisma.appVersion.findMany({ where: { status: 1 }, orderBy: { createdAt: 'desc' } }),
     ]);
@@ -149,6 +149,8 @@ export class AppConfigService {
         url: r.url,
         type: r.type,
         priority: r.priority,
+        minMemberLevel: r.minMemberLevel,
+        isDefault: r.isDefault,
         scripts: repoScripts.filter(s => s.repoId === r.id || s.repoId === 0).map(s => ({
           id: s.id,
           name: s.name,
@@ -170,6 +172,9 @@ export class AppConfigService {
         name: a.name,
         type: a.type,
         url: a.url,
+        minMemberLevel: a.minMemberLevel,
+        priority: a.priority,
+        isDefault: a.isDefault,
       })),
       layout: {
         mobile: mobileLayout ? this.parseLayoutConfig(mobileLayout.config) : null,
